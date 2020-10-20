@@ -10,4 +10,4 @@ RUN mvn clean package
 FROM openjdk:11-slim-buster
 WORKDIR /app
 COPY --from=build /app/target/scraper-1.0-SNAPSHOT.jar /app
-CMD ["java -jar scraper-1.0-SNAPSHOT.jar"]
+CMD ["java -jar /app/scraper-1.0-SNAPSHOT.jar"]
