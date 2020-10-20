@@ -1,9 +1,13 @@
-FROM maven:3.6.0-jdk-11-slim
-# Make the installation directory
-RUN mkdir /opt/nvidia-snatcher-j/
+FROM alpine/git as clone
+WORKDIR /app
+RUN git clone https://github.com/eckig/nvidia-snatcher-j.git . 
 
-# Copy the start script to the container
-COPY start.sh /start.sh
+FROM maven:3-openjdk-11 as build
+WORKDIR /app
+COPY --from=clone /app /app 
+RUN mvn clean package 
 
-# Set the start script as entrypoint
-ENTRYPOINT ./start.sh
+FROM openjdk:11-slim-buster
+WORKDIR /app
+COPY --from=build /app/target/scraper-1.0-SNAPSHOT.jar /app
+CMD ["java -jar scraper-1.0-SNAPSHOT.jar"]
