@@ -4,7 +4,7 @@ RUN git clone https://github.com/eckig/nvidia-snatcher-j.git .
 
 FROM maven:3-openjdk-11 as build
 WORKDIR /app
-COPY --from=clone /app/nvidia-snatcher-j /app 
+COPY --from=clone /app /app 
 RUN mvn clean package 
 
 FROM openjdk:11-slim-buster
