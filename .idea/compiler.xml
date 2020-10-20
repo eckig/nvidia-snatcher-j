@@ -7,6 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="nvidia-snatcher-j" />
+        <module name="scraper" />
       </profile>
     </annotationProcessing>
   </component>

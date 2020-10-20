@@ -12,7 +12,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.gargoylesoftware.htmlunit.AjaxController;
-import com.gargoylesoftware.htmlunit.ProxyConfig;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.DomNode;
@@ -20,7 +19,6 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 import model.Search;
 import notify.INotify;
-import notify.MailNotification;
 
 public class JNvidiaSnatcher
 {
@@ -42,7 +40,6 @@ public class JNvidiaSnatcher
                 return true;
             }
         });
-        mWebClient.getOptions().setProxyConfig(new ProxyConfig("172.22.41.10", 8080));
         mWebClient.getOptions().setCssEnabled(false);
         mWebClient.getOptions().setJavaScriptEnabled(true);
         mWebClient.getOptions().setDownloadImages(false);
@@ -110,13 +107,15 @@ public class JNvidiaSnatcher
     {
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
-        final List<Search> targets = List.of(new Search(
-                "https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203080&manufacturer=NVIDIA",
-                "NVIDIA GEFORCE RTX 3080"), new Search(
-                "https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203090&manufacturer=NVIDIA",
-                "NVIDIA GEFORCE RTX 3090"));
+        //@formatter:off
+        final List<Search> targets = List.of
+        (
+        new Search("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203080&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3080")
+        //,new Search("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203090&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3090")
+        );
+        //@formatter:on
 
-        final List<INotify> notify = List.of(new MailNotification());
+        final List<INotify> notify = INotify.fromEnvironment();
         final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
         for (final var search : targets)
         {
