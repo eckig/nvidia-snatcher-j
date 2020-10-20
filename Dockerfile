@@ -9,5 +9,5 @@ RUN mvn clean package
 
 FROM openjdk:11-slim-buster
 WORKDIR /app
-COPY --from=build /app/target/scraper-1.0-SNAPSHOT.jar /app/app.jar
-CMD ["java -jar /app/app.jar"]
+COPY --from=build /app/target/scraper-1.0-SNAPSHOT-jar-with-dependencies.jar /app/app.jar
+CMD ["java -cp app.jar main.JNvidiaSnatcher"]
