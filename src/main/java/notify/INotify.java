@@ -2,11 +2,12 @@ package notify;
 
 import model.Search;
 
+import java.io.IOException;
 import java.util.List;
 
 public interface INotify
 {
-    void notify(final Search pSearch);
+    void notify(final Search pSearch) throws IOException;
 
     static List<INotify> fromEnvironment()
     {
@@ -20,7 +21,8 @@ public interface INotify
             }
             catch (Exception e)
             {
-                e.printStackTrace();
+                System.out.println("Failed to create GMailNotifications:");
+                e.printStackTrace(System.out);
             }
         }
         return List.of();

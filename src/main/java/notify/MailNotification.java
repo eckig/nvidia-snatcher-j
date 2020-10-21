@@ -1,5 +1,6 @@
 package notify;
 
+import java.io.IOException;
 import java.util.Properties;
 
 import javax.mail.Address;
@@ -32,8 +33,7 @@ public class MailNotification implements INotify
         mMailTo = pMailTo;
     }
 
-    @Override
-    public void notify(final Search pSearch)
+    protected void send(final String pSubject, final String pBodyText) throws IOException
     {
         final Properties prop = new Properties();
         prop.put("mail.smtp.host", mHost);
@@ -54,13 +54,19 @@ public class MailNotification implements INotify
             final Message message = new MimeMessage(session);
             message.setFrom(mMailFrom);
             message.setRecipients(Message.RecipientType.TO, new Address[]{mMailTo});
-            message.setSubject("Found '" + pSearch.getTitle() + "'!");
-            message.setText("Found a '" + pSearch.getTitle() + "', see: " + pSearch.getUrl());
+            message.setSubject(pSubject);
+            message.setText(pBodyText);
             Transport.send(message);
         }
         catch (MessagingException e)
         {
-            e.printStackTrace();
+            throw new IOException(e);
         }
+    }
+
+    @Override
+    public void notify(final Search pSearch) throws IOException
+    {
+        send("Found '" + pSearch.getTitle() + "'!", "Found a '" + pSearch.getTitle() + "', see: " + pSearch.getUrl());
     }
 }

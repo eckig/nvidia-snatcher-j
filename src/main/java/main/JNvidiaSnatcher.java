@@ -1,5 +1,6 @@
 package main;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
@@ -47,12 +48,18 @@ public class JNvidiaSnatcher
         mWebClient.getOptions().setPopupBlockerEnabled(true);
         mWebClient.getOptions().setWebSocketEnabled(false);
         mWebClient.getOptions().setThrowExceptionOnScriptError(false);
+        mWebClient.getOptions().setHistoryPageCacheLimit(0);
+        mWebClient.getOptions().setHistorySizeLimit(-1);
     }
 
     private void load()
     {
         try
         {
+            // clear previous data before next request:
+            mWebClient.getCache().clear();
+            mWebClient.getCookieManager().clearCookies();
+
             final HtmlPage page = mWebClient.getPage(mSearch.getUrl());
 
             List<Object> productDetailsListTiles = null;
@@ -99,7 +106,15 @@ public class JNvidiaSnatcher
     {
         for (final var notify : mToNotify)
         {
-            notify.notify(mSearch);
+            try
+            {
+                notify.notify(mSearch);
+            }
+            catch (IOException e)
+            {
+                System.out.println("Failed to notify about match:");
+                e.printStackTrace(System.out);
+            }
         }
     }
 
