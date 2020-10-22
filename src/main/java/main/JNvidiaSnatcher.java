@@ -1,9 +1,6 @@
 package main;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -15,15 +12,15 @@ import java.util.logging.Logger;
 import com.gargoylesoftware.htmlunit.AjaxController;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
-import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import model.NvidiaStoreSearch;
 import model.Search;
 import notify.INotify;
 
 public class JNvidiaSnatcher
 {
-    private static final String OUT_OF_STOCK = "Out Of Stock";
+    public static final String ENV_SCRAPER_INTERVAL = "SCRAPER_INTERVAL";
 
     private final WebClient mWebClient = new WebClient();
     private final Search mSearch;
@@ -62,43 +59,22 @@ public class JNvidiaSnatcher
 
             final HtmlPage page = mWebClient.getPage(mSearch.getUrl());
 
-            List<Object> productDetailsListTiles = null;
-            for (int i = 0; i < 5 && (productDetailsListTiles == null || productDetailsListTiles.isEmpty()); i++)
+            List<Object> listing = null;
+            for (int i = 0; i < 5 && (listing == null || listing.isEmpty()); i++)
             {
                 mWebClient.waitForBackgroundJavaScript(200);
-                productDetailsListTiles =
-                        page.getByXPath(
-                                "//div[@class='product-details-list-tile' or @class='product-container clearfix']");
+                listing = mSearch.getListing(page);
             }
 
-            for (final var productDetailsListTile : productDetailsListTiles)
+            if(mSearch.matches(listing))
             {
-                if (productDetailsListTile instanceof DomNode)
-                {
-                    final DomNode htmlElement = (DomNode) productDetailsListTile;
-                    for (final var name : htmlElement.getByXPath("//h2[@class='name']/text()"))
-                    {
-                        final var status = htmlElement.getFirstByXPath("//div[@class='buy']/a/text()");
-
-                        if (name != null && (mSearch.getTitle().equals(name) ||
-                                mSearch.getTitle().equals(name.toString())))
-                        {
-                            System.out.println(
-                                    DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(LocalDateTime.now()) +
-                                            ": " + name + ": " + status);
-                            if (status == null || !OUT_OF_STOCK.equalsIgnoreCase(status.toString()))
-                            {
-                                notifyMatch();
-                            }
-                            return;
-                        }
-                    }
-                }
+                notifyMatch();
             }
         }
         catch (Exception e)
         {
-            e.printStackTrace();
+            System.out.println("ERROR while scraping page: ");
+            e.printStackTrace(System.out);
         }
     }
 
@@ -122,11 +98,14 @@ public class JNvidiaSnatcher
     {
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
+        final String envInterval = System.getenv(ENV_SCRAPER_INTERVAL);
+        final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
+
         //@formatter:off
         final List<Search> targets = List.of
         (
-        new Search("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203080&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3080")
-        //,new Search("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203090&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3090")
+        new NvidiaStoreSearch("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203080&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3080")
+        //,new NvidiaStoreSearch("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203090&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3090")
         );
         //@formatter:on
 
@@ -135,7 +114,7 @@ public class JNvidiaSnatcher
         for (final var search : targets)
         {
             final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify);
-            pool.scheduleWithFixedDelay(scraper::load, 15, 15, TimeUnit.SECONDS);
+            pool.scheduleWithFixedDelay(scraper::load, interval, interval, TimeUnit.SECONDS);
         }
 
         try
@@ -144,6 +123,7 @@ public class JNvidiaSnatcher
         }
         catch (InterruptedException e)
         {
+            System.out.println("Interrupted!");
         }
     }
 

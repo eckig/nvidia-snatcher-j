@@ -1,6 +1,10 @@
 package model;
 
-public class Search
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+import java.util.List;
+
+public abstract class Search
 {
     private final String url;
     private final String title;
@@ -20,4 +24,8 @@ public class Search
     {
         return title;
     }
+
+    public abstract <T> List<T> getListing(final HtmlPage pHtmlPage);
+
+    public abstract <T> boolean matches(final List<T> pListing);
 }
