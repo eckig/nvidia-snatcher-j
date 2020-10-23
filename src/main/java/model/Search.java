@@ -3,6 +3,7 @@ package model;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 import java.util.List;
+import java.util.Optional;
 
 public abstract class Search
 {
@@ -27,5 +28,5 @@ public abstract class Search
 
     public abstract <T> List<T> getListing(final HtmlPage pHtmlPage);
 
-    public abstract <T> boolean matches(final List<T> pListing);
+    public abstract <T> Optional<Match> matches(final List<T> pListing);
 }

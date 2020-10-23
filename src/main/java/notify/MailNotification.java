@@ -65,8 +65,9 @@ public class MailNotification implements INotify
     }
 
     @Override
-    public void notify(final Search pSearch) throws IOException
+    public void notify(final Search pSearch, final String pMessage) throws IOException
     {
-        send("Found '" + pSearch.getTitle() + "'!", "Found a '" + pSearch.getTitle() + "', see: " + pSearch.getUrl());
+        send("Found '" + pSearch.getTitle() + "'!",
+                "Found a '" + pSearch.getTitle() + "':\n" + pMessage + "\n\nsee: " + pSearch.getUrl());
     }
 }

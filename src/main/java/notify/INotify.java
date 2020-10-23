@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface INotify
 {
-    void notify(final Search pSearch) throws IOException;
+    void notify(final Search pSearch, final String pMessage) throws IOException;
 
     static List<INotify> fromEnvironment()
     {

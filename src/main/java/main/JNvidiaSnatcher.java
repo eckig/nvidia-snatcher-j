@@ -1,6 +1,9 @@
 package main;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -14,6 +17,7 @@ import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
+import model.Match;
 import model.NvidiaStoreSearch;
 import model.Search;
 import notify.INotify;
@@ -53,10 +57,6 @@ public class JNvidiaSnatcher
     {
         try
         {
-            // clear previous data before next request:
-            mWebClient.getCache().clear();
-            mWebClient.getCookieManager().clearCookies();
-
             final HtmlPage page = mWebClient.getPage(mSearch.getUrl());
 
             List<Object> listing = null;
@@ -66,10 +66,7 @@ public class JNvidiaSnatcher
                 listing = mSearch.getListing(page);
             }
 
-            if(mSearch.matches(listing))
-            {
-                notifyMatch();
-            }
+            mSearch.matches(listing).ifPresentOrElse(this::notifyMatch, this::reset);
         }
         catch (Exception e)
         {
@@ -78,13 +75,28 @@ public class JNvidiaSnatcher
         }
     }
 
-    private void notifyMatch()
+    private void reset()
     {
+        // if nothing found, clear cache and cookies before next try:
+        mWebClient.getCache().clear();
+        mWebClient.getCookieManager().clearCookies();
+    }
+
+    private void notifyMatch(final Match pMessage)
+    {
+        final String messageWithTime =
+                DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(LocalDateTime.now()) + ": " +
+                        pMessage.getMessage();
+        System.out.println(messageWithTime);
+        if (!pMessage.isNotify())
+        {
+            return;
+        }
         for (final var notify : mToNotify)
         {
             try
             {
-                notify.notify(mSearch);
+                notify.notify(mSearch, messageWithTime);
             }
             catch (IOException e)
             {
@@ -101,13 +113,10 @@ public class JNvidiaSnatcher
         final String envInterval = System.getenv(ENV_SCRAPER_INTERVAL);
         final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
 
-        //@formatter:off
-        final List<Search> targets = List.of
-        (
-        new NvidiaStoreSearch("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203080&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3080")
-        //,new NvidiaStoreSearch("https://www.nvidia.com/de-de/shop/geforce/gpu/?page=1&limit=9&locale=de-de&category=GPU&gpu=RTX%203090&manufacturer=NVIDIA","NVIDIA GEFORCE RTX 3090")
-        );
-        //@formatter:on
+        final List<Search> targets =
+                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.DE_DE)
+//                        ,new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3090_FE, NvidiaStoreSearch.Store.DE_DE)
+                );
 
         final List<INotify> notify = INotify.fromEnvironment();
         final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
