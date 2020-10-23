@@ -2,6 +2,7 @@ package model;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.google.common.net.UrlEscapers;
 
 import java.util.List;
 import java.util.Objects;
@@ -34,7 +35,8 @@ public class NvidiaStoreSearch extends Search
         String url(final Store pStore)
         {
             return "https://www.nvidia.com/" + pStore.locale() + "/shop/geforce/gpu/?page=1&limit=9&locale=" +
-                    pStore.locale + "&category=GPU&gpu="+gpu+"&manufacturer="+manufacturer;
+                    pStore.locale + "&category=GPU&gpu=" + UrlEscapers.urlFragmentEscaper().escape(gpu) +
+                    "&manufacturer=" + UrlEscapers.urlFragmentEscaper().escape(manufacturer);
         }
     }
 
@@ -91,15 +93,31 @@ public class NvidiaStoreSearch extends Search
                     if (name != null && (getTitle().equals(name) || getTitle().equals(name.toString())))
                     {
                         final var status = htmlElement.getFirstByXPath("//div[@class='buy']/a/text()");
-                        final String message = name + ": " + status;
-                        final Match match =
-                                status == null || !mStore.outOfStockText().equalsIgnoreCase(status.toString()) ?
-                                        Match.notify(message) : Match.info(message);
+                        final Match match;
+                        if (status == null)
+                        {
+                            match = Match.unknown(this);
+                        }
+                        else
+                        {
+                            final String message = getTitle() + ": " + status;
+                            match = !safeText(mStore.outOfStockText()).equalsIgnoreCase(safeText(status.toString())) ?
+                                    Match.notify(message) : Match.info(message);
+                        }
                         return Optional.of(match);
                     }
                 }
             }
         }
         return Optional.empty();
+    }
+
+    private static String safeText(final String pText)
+    {
+        if (pText == null)
+        {
+            return "";
+        }
+        return pText.strip();
     }
 }

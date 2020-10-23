@@ -1,6 +1,7 @@
 package notify;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Properties;
 
 import javax.mail.Address;
@@ -68,6 +69,44 @@ public class MailNotification implements INotify
     public void notify(final Search pSearch, final String pMessage) throws IOException
     {
         send("Found '" + pSearch.getTitle() + "'!",
-                "Found a '" + pSearch.getTitle() + "':\n" + pMessage + "\n\nsee: " + pSearch.getUrl());
+                "Found possible match for '" + pSearch.getTitle() + "':\n" + pMessage + "\n\nsee: " + pSearch.getUrl());
+    }
+
+    @Override
+    public boolean equals(final Object pO)
+    {
+        if (this == pO)
+        {
+            return true;
+        }
+        if (pO == null || getClass() != pO.getClass())
+        {
+            return false;
+        }
+        final MailNotification that = (MailNotification) pO;
+        return mPort == that.mPort &&
+                Objects.equals(mHost, that.mHost) &&
+                Objects.equals(mUser, that.mUser) &&
+                Objects.equals(mPassword, that.mPassword) &&
+                Objects.equals(mMailFrom, that.mMailFrom) &&
+                Objects.equals(mMailTo, that.mMailTo);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(mHost, mPort, mUser, mPassword, mMailFrom, mMailTo);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "MailNotification{" +
+                "mHost='" + mHost + '\'' +
+                ", mPort=" + mPort +
+                ", mUser='" + mUser + '\'' +
+                ", mMailFrom=" + mMailFrom +
+                ", mMailTo=" + mMailTo +
+                '}';
     }
 }

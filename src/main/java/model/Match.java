@@ -23,6 +23,11 @@ public class Match
         return new Match(pMessage, false);
     }
 
+    public static Match unknown(final Search pSearch)
+    {
+        return new Match(pSearch.getTitle() + ": Status could not be retrieved.", false);
+    }
+
     public String getMessage()
     {
         return mMessage;
