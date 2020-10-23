@@ -11,6 +11,7 @@ import java.util.List;
 public class NvidiaStoreSearch extends Search
 {
     private static final String OUT_OF_STOCK = "Out Of Stock";
+    private static final String OUT_OF_STOCK_DE = "Derzeit nicht verfügbar";
 
     public NvidiaStoreSearch(String pUrl, String pTitle)
     {
@@ -40,7 +41,8 @@ public class NvidiaStoreSearch extends Search
                         System.out.println(
                                 DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(LocalDateTime.now()) +
                                         ": " + name + ": " + status);
-                        return status == null || !OUT_OF_STOCK.equalsIgnoreCase(status.toString());
+                        return status == null || (!OUT_OF_STOCK.equalsIgnoreCase(status.toString()) &&
+                                !OUT_OF_STOCK_DE.equalsIgnoreCase(status.toString()));
                     }
                 }
             }
