@@ -79,13 +79,13 @@ public class NvidiaStoreSearch extends Search
     }
 
     @Override
-    public <T> List<T> getListing(HtmlPage pPage)
+    public <T> List<T> getListing(final HtmlPage pPage)
     {
         return pPage == null ? null : pPage.getByXPath("//div[@class='product-details-list-tile' or @class='product-container clearfix']");
     }
 
     @Override
-    public <T> Optional<Match> matches(List<T> pListing)
+    public <T> Optional<Match> matches(final List<T> pListing)
     {
         for (final var productDetailsListTile : pListing)
         {
@@ -105,7 +105,8 @@ public class NvidiaStoreSearch extends Search
                         else
                         {
                             final boolean isInStock = mStore.isInStock(safeText(status.toString()));
-                            match = isInStock ? Match.notify(this, status.toString()) : Match.info(this, status.toString());
+                            match = isInStock ? Match.inStock(this, status.toString()) :
+                                    Match.outOfStock(this, status.toString());
                         }
                         return Optional.of(match);
                     }

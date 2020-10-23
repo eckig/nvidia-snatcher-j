@@ -1,11 +1,11 @@
 package model;
 
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
-import com.gargoylesoftware.htmlunit.html.DomNode;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 public class NotebooksbilligerStoreSearch extends Search
 {
@@ -42,13 +42,13 @@ public class NotebooksbilligerStoreSearch extends Search
     }
 
     @Override
-    public <T> List<T> getListing(HtmlPage pPage)
+    public <T> List<T> getListing(final HtmlPage pPage)
     {
         return pPage == null ? null : pPage.getByXPath("//div[@id='product_page_detail']");
     }
 
     @Override
-    public <T> Optional<Match> matches(List<T> pListing)
+    public <T> Optional<Match> matches(final List<T> pListing)
     {
         for (final var productDetailsListTile : pListing)
         {
@@ -65,7 +65,7 @@ public class NotebooksbilligerStoreSearch extends Search
                 {
                     final String statusText = safeText(status instanceof DomNode ? ((DomNode)status).asText() : status.toString());
                     final boolean isInStock = statusText.contains("sofort ab lager");
-                    match = isInStock ? Match.notify(this, statusText) : Match.info(this, statusText);
+                    match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
                 }
                 return Optional.of(match);
             }

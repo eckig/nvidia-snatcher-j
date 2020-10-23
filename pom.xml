@@ -77,6 +77,11 @@
             <artifactId>guava</artifactId>
             <version>30.0-jre</version>
         </dependency>
+        <dependency>
+            <groupId>com.diogonunes</groupId>
+            <artifactId>JColor</artifactId>
+            <version>5.0.1</version>
+        </dependency>
     </dependencies>
 
 </project>

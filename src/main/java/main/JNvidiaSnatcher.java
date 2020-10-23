@@ -1,9 +1,17 @@
 package main;
 
+import com.gargoylesoftware.htmlunit.AjaxController;
+import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebRequest;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
+import model.Match;
+import model.NotebooksbilligerStoreSearch;
+import model.NvidiaStoreSearch;
+import model.Search;
+import notify.INotify;
+
 import java.io.IOException;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
@@ -11,17 +19,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import com.gargoylesoftware.htmlunit.AjaxController;
-import com.gargoylesoftware.htmlunit.WebClient;
-import com.gargoylesoftware.htmlunit.WebRequest;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-
-import model.Match;
-import model.NotebooksbilligerStoreSearch;
-import model.NvidiaStoreSearch;
-import model.Search;
-import notify.INotify;
 
 public class JNvidiaSnatcher
 {
@@ -37,19 +34,26 @@ public class JNvidiaSnatcher
         mSearch = Objects.requireNonNull(pSearch);
         mWebClient.setAjaxController(new AjaxController()
         {
-            @Override
-            public boolean processSynchron(final HtmlPage page, final WebRequest request, final boolean async)
+            private static final long serialVersionUID = 2543822177506637558L;
+
+            @Override public boolean processSynchron(final HtmlPage page, final WebRequest request, final boolean async)
             {
                 return true;
             }
         });
+        mWebClient.setJavaScriptErrorListener(new SilentJavaScriptErrorListener());
+        mWebClient.setIncorrectnessListener((message, origin) ->
+        {
+            // ignore
+        });
         mWebClient.getOptions().setCssEnabled(false);
         mWebClient.getOptions().setJavaScriptEnabled(true);
         mWebClient.getOptions().setDownloadImages(false);
-        mWebClient.getOptions().setAppletEnabled(false);
+        mWebClient.getOptions().setPrintContentOnFailingStatusCode(false);
         mWebClient.getOptions().setPopupBlockerEnabled(true);
         mWebClient.getOptions().setWebSocketEnabled(false);
         mWebClient.getOptions().setThrowExceptionOnScriptError(false);
+        mWebClient.getOptions().setAppletEnabled(false);
         mWebClient.getOptions().setHistoryPageCacheLimit(0);
         mWebClient.getOptions().setHistorySizeLimit(-1);
     }
@@ -69,7 +73,7 @@ public class JNvidiaSnatcher
 
             mSearch.matches(listing).ifPresentOrElse(this::notifyMatch, this::reset);
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
             System.out.println("ERROR while scraping page: ");
             e.printStackTrace(System.out);
@@ -85,10 +89,7 @@ public class JNvidiaSnatcher
 
     private void notifyMatch(final Match pMessage)
     {
-        final String messageWithTime =
-                DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(LocalDateTime.now()) + ": " +
-                        pMessage.search().store() + ": " + pMessage.search().product() + ": " + pMessage.message();
-        System.out.println(messageWithTime);
+        System.out.println(pMessage.consoleMessage());
         if (!pMessage.notification())
         {
             return;
@@ -97,9 +98,9 @@ public class JNvidiaSnatcher
         {
             try
             {
-                notify.notify(mSearch, messageWithTime);
+                notify.notify(mSearch, pMessage.notificationMessage());
             }
-            catch (IOException e)
+            catch (final IOException e)
             {
                 System.out.println("Failed to notify about match:");
                 e.printStackTrace(System.out);
@@ -107,19 +108,19 @@ public class JNvidiaSnatcher
         }
     }
 
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
         final String envInterval = System.getenv(ENV_SCRAPER_INTERVAL);
         final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
 
-        final List<Search> targets =
-                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.NVIDIA_DE_DE),
-                        new NotebooksbilligerStoreSearch(NotebooksbilligerStoreSearch.Model.RTX_3080_FE));
+        final List<Search> targets = List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE,
+                        NvidiaStoreSearch.Store.NVIDIA_DE_DE),
+                new NotebooksbilligerStoreSearch(NotebooksbilligerStoreSearch.Model.RTX_3080_FE));
 
         final List<INotify> notify = INotify.fromEnvironment();
-        final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
+        final ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
         for (final var search : targets)
         {
             final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify);
@@ -130,7 +131,7 @@ public class JNvidiaSnatcher
         {
             pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         }
-        catch (InterruptedException e)
+        catch (final InterruptedException e)
         {
             System.out.println("Interrupted!");
         }
