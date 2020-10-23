@@ -43,23 +43,23 @@ public class NvidiaStoreSearch extends Search
 
     public enum Store
     {
-        DE_DE("derzeit nicht", "de-de", Locale.GERMAN),
-        EN_US("out of stock", "en-us", Locale.ENGLISH);
+        DE_DE("jetzt kaufen", "de-de", Locale.GERMAN),
+        EN_US("buy now", "en-us", Locale.ENGLISH);
 
-        private final String outOfStockText;
+        private final String inStockText;
         private final String localeUrl;
         private final Locale language;
 
-        Store(final String pOutOfStockText, final String pLocaleUrl, final Locale pLanguage)
+        Store(final String pInStockText, final String pLocaleUrl, final Locale pLanguage)
         {
-            outOfStockText = pOutOfStockText;
+            inStockText = pInStockText;
             localeUrl = pLocaleUrl;
             language = pLanguage;
         }
 
-        boolean isOutOfStock(final String pStatus)
+        boolean isInStock(final String pStatus)
         {
-            return pStatus != null && pStatus.toLowerCase(language).contains(outOfStockText);
+            return pStatus != null && pStatus.toLowerCase(language).contains(inStockText);
         }
 
         public String localeUrl()
@@ -104,8 +104,8 @@ public class NvidiaStoreSearch extends Search
                         else
                         {
                             final String message = getTitle() + ": " + status;
-                            final boolean isOutOfStock = mStore.isOutOfStock(safeText(status.toString()));
-                            match = isOutOfStock ? Match.info(message) : Match.notify(message);
+                            final boolean isInStock = mStore.isInStock(safeText(status.toString()));
+                            match = isInStock ? Match.notify(message) : Match.info(message);
                         }
                         return Optional.of(match);
                     }

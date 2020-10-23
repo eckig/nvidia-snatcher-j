@@ -18,6 +18,7 @@ import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 import model.Match;
+import model.NotebooksbilligerStoreSearch;
 import model.NvidiaStoreSearch;
 import model.Search;
 import notify.INotify;
@@ -114,16 +115,15 @@ public class JNvidiaSnatcher
         final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
 
         final List<Search> targets =
-                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.DE_DE)
-//                        ,new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3090_FE, NvidiaStoreSearch.Store.DE_DE)
-                );
+                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.DE_DE),
+                        new NotebooksbilligerStoreSearch(NotebooksbilligerStoreSearch.Model.RTX_3080_FE));
 
         final List<INotify> notify = INotify.fromEnvironment();
         final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
         for (final var search : targets)
         {
             final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify);
-            pool.scheduleWithFixedDelay(scraper::load, interval, interval, TimeUnit.SECONDS);
+            pool.scheduleWithFixedDelay(scraper::load, 0, interval, TimeUnit.SECONDS);
         }
 
         try
