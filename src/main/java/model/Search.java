@@ -9,22 +9,29 @@ import java.util.Optional;
 public abstract class Search
 {
     private final String url;
+    private final String store;
     private final String title;
 
-    public Search(final String pUrl, final String pTitle)
+    public Search(final String pStore, final String pUrl, final String pTitle)
     {
         url = pUrl;
         title = pTitle;
+        store = pStore;
     }
 
-    public String getUrl()
+    public String url()
     {
         return url;
     }
 
-    public String getTitle()
+    public String product()
     {
         return title;
+    }
+
+    public String store()
+    {
+        return store;
     }
 
     public abstract <T> List<T> getListing(final HtmlPage pHtmlPage);

@@ -68,8 +68,8 @@ public class MailNotification implements INotify
     @Override
     public void notify(final Search pSearch, final String pMessage) throws IOException
     {
-        send("Found '" + pSearch.getTitle() + "'!",
-                "Found possible match for '" + pSearch.getTitle() + "':\n" + pMessage + "\n\nsee: " + pSearch.getUrl());
+        send("Found '" + pSearch.product() + "'!",
+                "Found possible match for '" + pSearch.product() + "':\n" + pMessage + "\n\nsee: " + pSearch.url());
     }
 
     @Override

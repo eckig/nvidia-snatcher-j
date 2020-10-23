@@ -58,7 +58,7 @@ public class JNvidiaSnatcher
     {
         try
         {
-            final HtmlPage page = mWebClient.getPage(mSearch.getUrl());
+            final HtmlPage page = mWebClient.getPage(mSearch.url());
 
             List<Object> listing = null;
             for (int i = 0; i < 5 && (listing == null || listing.isEmpty()); i++)
@@ -87,9 +87,9 @@ public class JNvidiaSnatcher
     {
         final String messageWithTime =
                 DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(LocalDateTime.now()) + ": " +
-                        pMessage.getMessage();
+                        pMessage.search().store() + ": " + pMessage.search().product() + ": " + pMessage.message();
         System.out.println(messageWithTime);
-        if (!pMessage.isNotify())
+        if (!pMessage.notification())
         {
             return;
         }
@@ -115,7 +115,7 @@ public class JNvidiaSnatcher
         final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
 
         final List<Search> targets =
-                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.DE_DE),
+                List.of(new NvidiaStoreSearch(NvidiaStoreSearch.Model.RTX_3080_FE, NvidiaStoreSearch.Store.NVIDIA_DE_DE),
                         new NotebooksbilligerStoreSearch(NotebooksbilligerStoreSearch.Model.RTX_3080_FE));
 
         final List<INotify> notify = INotify.fromEnvironment();

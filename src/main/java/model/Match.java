@@ -4,67 +4,67 @@ import java.util.Objects;
 
 public class Match
 {
+    private final Search mSearch;
     private final String mMessage;
     private final boolean mNotify;
 
-    private Match(final String pMessage, final boolean pNotify)
+    private Match(final Search pSearch, final String pMessage, final boolean pNotify)
     {
         mMessage = pMessage;
+        mSearch = pSearch;
         mNotify = pNotify;
     }
 
-    public static Match notify(final String pMessage)
+    public static Match notify(final Search pSearch, final String pMessage)
     {
-        return new Match(pMessage, true);
+        return new Match(pSearch, pMessage, true);
     }
 
-    public static Match info(final String pMessage)
+    public static Match info(final Search pSearch, final String pMessage)
     {
-        return new Match(pMessage, false);
+        return new Match(pSearch, pMessage, false);
     }
 
     public static Match unknown(final Search pSearch)
     {
-        return new Match(pSearch.getTitle() + ": Status could not be retrieved.", false);
+        return new Match(pSearch, "Status could not be retrieved.", false);
     }
 
-    public String getMessage()
+    public Search search()
+    {
+        return mSearch;
+    }
+
+    public String message()
     {
         return mMessage;
     }
 
-    public boolean isNotify()
+    public boolean notification()
     {
         return mNotify;
     }
 
     @Override
-    public boolean equals(final Object pO)
+    public boolean equals(Object o)
     {
-        if (this == pO)
-        {
-            return true;
-        }
-        if (pO == null || getClass() != pO.getClass())
-        {
-            return false;
-        }
-        final Match match = (Match) pO;
-        return mNotify == match.mNotify &&
-                Objects.equals(mMessage, match.mMessage);
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Match match = (Match) o;
+        return mNotify == match.mNotify && Objects.equals(mSearch, match.mSearch);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(mMessage, mNotify);
+        return Objects.hash(mSearch, mNotify);
     }
 
     @Override
     public String toString()
     {
         return "Match{" +
-                "mMessage='" + mMessage + '\'' +
+                "mSearch=" + mSearch +
                 ", mNotify=" + mNotify +
                 '}';
     }

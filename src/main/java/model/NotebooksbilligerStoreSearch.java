@@ -1,14 +1,11 @@
 package model;
 
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
-import com.gargoylesoftware.htmlunit.html.HtmlButton;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.google.common.net.UrlEscapers;
 
 public class NotebooksbilligerStoreSearch extends Search
 {
@@ -40,7 +37,7 @@ public class NotebooksbilligerStoreSearch extends Search
 
     public NotebooksbilligerStoreSearch(final Model pModel)
     {
-        super(Objects.requireNonNull(pModel.url(), "Model may not be null!"),
+        super("NBB", Objects.requireNonNull(pModel.url(), "Model may not be null!"),
                 Objects.requireNonNull(pModel.model(), "Store may not be null"));
     }
 
@@ -67,9 +64,8 @@ public class NotebooksbilligerStoreSearch extends Search
                 else
                 {
                     final String statusText = safeText(status instanceof DomNode ? ((DomNode)status).asText() : status.toString());
-                    final String message = getTitle() + ": " + statusText;
                     final boolean isInStock = statusText.contains("sofort ab lager");
-                    match = isInStock ? Match.notify(message) : Match.info(message);
+                    match = isInStock ? Match.notify(this, statusText) : Match.info(this, statusText);
                 }
                 return Optional.of(match);
             }

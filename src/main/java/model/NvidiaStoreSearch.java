@@ -43,8 +43,8 @@ public class NvidiaStoreSearch extends Search
 
     public enum Store
     {
-        DE_DE("jetzt kaufen", "de-de", Locale.GERMAN),
-        EN_US("buy now", "en-us", Locale.ENGLISH);
+        NVIDIA_DE_DE("jetzt kaufen", "de-de", Locale.GERMAN),
+        NVIDIA_EN_US("buy now", "en-us", Locale.ENGLISH);
 
         private final String inStockText;
         private final String localeUrl;
@@ -72,7 +72,8 @@ public class NvidiaStoreSearch extends Search
 
     public NvidiaStoreSearch(final Model pModel, final Store pStore)
     {
-        super(Objects.requireNonNull(pModel.url(pStore), "Model may not be null!"),
+        super(Objects.requireNonNull(pStore,"Store may not be null!").name(),
+                Objects.requireNonNull(pModel.url(pStore), "Model may not be null!"),
                 Objects.requireNonNull(pModel.model(), "Store may not be null"));
         mStore = pStore;
     }
@@ -93,7 +94,7 @@ public class NvidiaStoreSearch extends Search
                 final DomNode htmlElement = (DomNode) productDetailsListTile;
                 for (final var name : htmlElement.getByXPath("//h2[@class='name']/text()"))
                 {
-                    if (name != null && (getTitle().equals(name) || getTitle().equals(name.toString())))
+                    if (name != null && (product().equals(name) || product().equals(name.toString())))
                     {
                         final var status = htmlElement.getFirstByXPath("//div[@class='buy']/a/text()");
                         final Match match;
@@ -103,9 +104,8 @@ public class NvidiaStoreSearch extends Search
                         }
                         else
                         {
-                            final String message = getTitle() + ": " + status;
                             final boolean isInStock = mStore.isInStock(safeText(status.toString()));
-                            match = isInStock ? Match.notify(message) : Match.info(message);
+                            match = isInStock ? Match.notify(this, status.toString()) : Match.info(this, status.toString());
                         }
                         return Optional.of(match);
                     }
