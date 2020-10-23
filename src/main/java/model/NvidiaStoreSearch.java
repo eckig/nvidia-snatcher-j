@@ -5,6 +5,7 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.net.UrlEscapers;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -34,34 +35,36 @@ public class NvidiaStoreSearch extends Search
 
         String url(final Store pStore)
         {
-            return "https://www.nvidia.com/" + pStore.locale() + "/shop/geforce/gpu/?page=1&limit=9&locale=" +
-                    pStore.locale + "&category=GPU&gpu=" + UrlEscapers.urlFragmentEscaper().escape(gpu) +
+            return "https://www.nvidia.com/" + pStore.localeUrl() + "/shop/geforce/gpu/?page=1&limit=9&locale=" +
+                    pStore.localeUrl() + "&category=GPU&gpu=" + UrlEscapers.urlFragmentEscaper().escape(gpu) +
                     "&manufacturer=" + UrlEscapers.urlFragmentEscaper().escape(manufacturer);
         }
     }
 
     public enum Store
     {
-        DE_DE("Derzeit nicht verfügbar", "de-de"),
-        EN_US("Out Of Stock", "en-us");
+        DE_DE("derzeit nicht", "de-de", Locale.GERMAN),
+        EN_US("out of stock", "en-us", Locale.ENGLISH);
 
         private final String outOfStockText;
-        private final String locale;
+        private final String localeUrl;
+        private final Locale language;
 
-        Store(final String pOutOfStockText, final String pLocale)
+        Store(final String pOutOfStockText, final String pLocaleUrl, final Locale pLanguage)
         {
             outOfStockText = pOutOfStockText;
-            locale = pLocale;
+            localeUrl = pLocaleUrl;
+            language = pLanguage;
         }
 
-        String outOfStockText()
+        boolean isOutOfStock(final String pStatus)
         {
-            return outOfStockText;
+            return pStatus != null && pStatus.toLowerCase(language).contains(outOfStockText);
         }
 
-        public String locale()
+        public String localeUrl()
         {
-            return locale;
+            return localeUrl;
         }
     }
 
@@ -101,8 +104,8 @@ public class NvidiaStoreSearch extends Search
                         else
                         {
                             final String message = getTitle() + ": " + status;
-                            match = !safeText(mStore.outOfStockText()).equalsIgnoreCase(safeText(status.toString())) ?
-                                    Match.notify(message) : Match.info(message);
+                            final boolean isOutOfStock = mStore.isOutOfStock(safeText(status.toString()));
+                            match = isOutOfStock ? Match.info(message) : Match.notify(message);
                         }
                         return Optional.of(match);
                     }
