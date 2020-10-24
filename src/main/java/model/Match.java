@@ -56,18 +56,19 @@ public class Match
     public String consoleMessage()
     {
         return DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(mTime) + ": " +
-                Strings.padEnd(search().store(), 15, ' ') + ": " +
-                Ansi.colorize(mState.consoleName(), mState.ansiAttributes()) + ": " + search().product() + " (" +
+                Strings.padEnd(search().store().name(), 15, ' ') + ": " +
+                Ansi.colorize(mState.consoleName(), mState.ansiAttributes()) + ": " + search().model().name() + " (" +
                 message() + ")";
     }
 
     public String notificationMessage()
     {
         return DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM).format(mTime) + ": " + search().store() + ": " +
-                search().product() + ": " + message();
+                search().model().name() + ": " + message();
     }
 
-    @Override public boolean equals(final Object o)
+    @Override
+    public boolean equals(final Object o)
     {
         if (this == o)
         {
@@ -82,12 +83,14 @@ public class Match
                 Objects.equals(mMessage, match.mMessage) && mState == match.mState;
     }
 
-    @Override public int hashCode()
+    @Override
+    public int hashCode()
     {
         return Objects.hash(mTime, mSearch, mMessage, mState);
     }
 
-    @Override public String toString()
+    @Override
+    public String toString()
     {
         return "Match{" + "mTime=" + mTime + ", mSearch=" + mSearch + ", mMessage='" + mMessage + '\'' + ", mState=" +
                 mState + '}';

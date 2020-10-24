@@ -1,8 +1,10 @@
 package notify;
 
 import model.Search;
+import util.Environment;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public interface INotify
@@ -11,20 +13,22 @@ public interface INotify
 
     static List<INotify> fromEnvironment()
     {
-        final String gmailUser = System.getenv(GMailNotification.ENV_GMAIL_USER);
-        final String gmailPw = System.getenv(GMailNotification.ENV_GMAIL_PASSWORD);
+        final var list = new ArrayList<INotify>();
+
+        final var gmailUser = Environment.get(GMailNotification.ENV_GMAIL_USER).orElse(null);
+        final var gmailPw = Environment.get(GMailNotification.ENV_GMAIL_PASSWORD).orElse(null);
         if (gmailUser != null && gmailPw != null)
         {
             try
             {
-                return List.of(new GMailNotification(gmailUser, gmailPw));
+                list.add(new GMailNotification(gmailUser, gmailPw));
             }
-            catch (Exception e)
+            catch (final Exception e)
             {
-                System.out.println("Failed to create GMailNotifications:");
-                e.printStackTrace(System.out);
+                System.out.println("Failed to create GMailNotifications: " + e);
             }
         }
-        return List.of();
+        System.out.println("Notifications configured: " + list);
+        return list;
     }
 }

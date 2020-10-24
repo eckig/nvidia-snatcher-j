@@ -3,44 +3,33 @@ package model.store;
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import model.Match;
+import model.Model;
 import model.Search;
+import model.Store;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 public class StoreNotebooksbilliger extends Search
 {
 
-    public enum Model
+    private StoreNotebooksbilliger(final Model pModel, final String pUrl)
     {
-        RTX_3080_FE("NVIDIA GEFORCE RTX 3080", "nvidia+geforce+rtx+3080+founders+edition"),
-        RTX_3090_FE("NVIDIA GEFORCE RTX 3090", "nvidia+geforce+rtx+3090+founders+edition");
-
-        private final String name;
-        private final String gpu;
-
-        Model(final String pName, final String pGpu)
-        {
-            name = pName;
-            gpu = pGpu;
-        }
-
-        String model()
-        {
-            return name;
-        }
-
-        String url()
-        {
-            return "https://www.notebooksbilliger.de/" + gpu;
-        }
+        super(Store.NBB, pUrl, pModel, false);
     }
 
-    public StoreNotebooksbilliger(final Model pModel)
+    public static Optional<Search> forModel(final Model pModel)
     {
-        super("NBB", Objects.requireNonNull(pModel.url(), "Model may not be null!"),
-                Objects.requireNonNull(pModel.model(), "Store may not be null"), false);
+        if (pModel != null)
+        {
+            final String url = switch (pModel)
+                    {
+                        case RTX_3080_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3080+founders+edition";
+                        case RTX_3090_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3090+founders+edition";
+                    };
+            return Optional.of(new StoreNotebooksbilliger(pModel, url));
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -56,7 +45,7 @@ public class StoreNotebooksbilliger extends Search
         {
             if (productDetailsListTile instanceof DomNode)
             {
-                final DomNode htmlElement = (DomNode) productDetailsListTile;
+                final var htmlElement = (DomNode) productDetailsListTile;
                 final var status = htmlElement.getFirstByXPath("//div[@class='availability_widget']");
                 final Match match;
                 if (status == null)

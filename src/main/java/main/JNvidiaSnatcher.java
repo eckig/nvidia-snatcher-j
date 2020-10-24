@@ -5,9 +5,8 @@ import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
 import model.Match;
 import model.Search;
-import model.store.StoreNotebooksbilliger;
-import model.store.StoreNvidia;
 import notify.INotify;
+import util.Environment;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
 
@@ -15,8 +14,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -24,18 +23,23 @@ import java.util.logging.Logger;
 public class JNvidiaSnatcher
 {
     public static final String ENV_SCRAPER_INTERVAL = "SCRAPER_INTERVAL";
+    public static final String ENV_SCRAPER_PARALLELISM = "SCRAPER_PARALLELISM";
+    public static final String ENV_SCRAPER_MAX_WAIT = "SCRAPER_MAX_WAIT";
 
     private final long mWaitTimeout;
     private final Search mSearch;
     private final List<INotify> mToNotify;
+    private final ExecutorService mAsyncPool;
 
     private WebClient mWebClient;
 
-    private JNvidiaSnatcher(final Search pSearch, final List<INotify> pToNotify, final long pWaitTimeout)
+    private JNvidiaSnatcher(final Search pSearch, final List<INotify> pToNotify, final long pWaitTimeout,
+                            final ExecutorService pAsyncPool)
     {
         mToNotify = pToNotify == null ? List.of() : List.copyOf(pToNotify);
         mSearch = Objects.requireNonNull(pSearch);
         mWaitTimeout = pWaitTimeout;
+        mAsyncPool = pAsyncPool;
     }
 
     private static WebClient createWebClient(final Search pSearch)
@@ -101,7 +105,7 @@ public class JNvidiaSnatcher
             {
                 throw new RuntimeException(e);
             }
-        });
+        }, mAsyncPool);
     }
 
     private void load()
@@ -163,25 +167,30 @@ public class JNvidiaSnatcher
     {
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
-        final String envInterval = System.getenv(ENV_SCRAPER_INTERVAL);
-        final long interval = envInterval == null || envInterval.isBlank() ? 20 : Long.parseLong(envInterval);
-        final long waitTimeout = interval * 2;
+        final var interval = Environment.getLong(ENV_SCRAPER_INTERVAL, 20);
+        final var waitTimeout = Environment.getLong(ENV_SCRAPER_MAX_WAIT, interval * 2);
+        final var parallelism = Environment.getInt(ENV_SCRAPER_PARALLELISM, 2);
 
-        final List<Search> targets =
-                List.of(new StoreNvidia(StoreNvidia.Model.RTX_3080_FE, StoreNvidia.Store.NVIDIA_DE_DE),
-                        new StoreNotebooksbilliger(StoreNotebooksbilliger.Model.RTX_3080_FE));
+        System.out.println(ENV_SCRAPER_INTERVAL + "=" + interval);
+        System.out.println(ENV_SCRAPER_MAX_WAIT + "=" + waitTimeout);
+        System.out.println(ENV_SCRAPER_PARALLELISM + "=" + parallelism);
 
-        final List<INotify> notify = INotify.fromEnvironment();
-        final ScheduledExecutorService pool = Executors.newScheduledThreadPool(2);
+        final var targets = Search.fromEnvironment();
+        final var notify = INotify.fromEnvironment();
+
+        // dont use fixed thread pool as a thread might get stuck (timeout, etc.)
+        final var asyncPool = Executors.newCachedThreadPool();
+        final var schedulePool = Executors.newScheduledThreadPool(parallelism);
+
         for (final var search : targets)
         {
-            final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify, waitTimeout);
-            pool.scheduleWithFixedDelay(scraper::load, 0, interval, TimeUnit.SECONDS);
+            final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify, waitTimeout, asyncPool);
+            schedulePool.scheduleWithFixedDelay(scraper::load, 0, interval, TimeUnit.SECONDS);
         }
 
         try
         {
-            pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+            schedulePool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
         }
         catch (final InterruptedException e)
         {

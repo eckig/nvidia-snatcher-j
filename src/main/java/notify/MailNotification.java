@@ -1,19 +1,12 @@
 package notify;
 
+import model.Search;
+
+import javax.mail.*;
+import javax.mail.internet.MimeMessage;
 import java.io.IOException;
 import java.util.Objects;
 import java.util.Properties;
-
-import javax.mail.Address;
-import javax.mail.Authenticator;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.MimeMessage;
-
-import model.Search;
 
 public class MailNotification implements INotify
 {
@@ -24,7 +17,8 @@ public class MailNotification implements INotify
     private final Address mMailFrom;
     private final Address mMailTo;
 
-    public MailNotification(String pHost, int pPort, String pUser, String pPassword, Address pMailFrom, Address pMailTo)
+    public MailNotification(final String pHost, final int pPort, final String pUser, final String pPassword,
+                            final Address pMailFrom, final Address pMailTo)
     {
         mHost = pHost;
         mPort = pPort;
@@ -44,6 +38,7 @@ public class MailNotification implements INotify
 
         final Session session = Session.getInstance(prop, new Authenticator()
         {
+            @Override
             protected PasswordAuthentication getPasswordAuthentication()
             {
                 return new PasswordAuthentication(mUser, mPassword);
@@ -59,7 +54,7 @@ public class MailNotification implements INotify
             message.setText(pBodyText);
             Transport.send(message);
         }
-        catch (MessagingException e)
+        catch (final MessagingException e)
         {
             throw new IOException(e);
         }
@@ -68,8 +63,9 @@ public class MailNotification implements INotify
     @Override
     public void notify(final Search pSearch, final String pMessage) throws IOException
     {
-        send("Found '" + pSearch.product() + "'!",
-                "Found possible match for '" + pSearch.product() + "':\n" + pMessage + "\n\nsee: " + pSearch.url());
+        send("Found '" + pSearch.model().name() + "'!",
+                "Found possible match for '" + pSearch.model().name() + "':\n" + pMessage + "\n\nsee: " +
+                        pSearch.url());
     }
 
     @Override
@@ -84,11 +80,8 @@ public class MailNotification implements INotify
             return false;
         }
         final MailNotification that = (MailNotification) pO;
-        return mPort == that.mPort &&
-                Objects.equals(mHost, that.mHost) &&
-                Objects.equals(mUser, that.mUser) &&
-                Objects.equals(mPassword, that.mPassword) &&
-                Objects.equals(mMailFrom, that.mMailFrom) &&
+        return mPort == that.mPort && Objects.equals(mHost, that.mHost) && Objects.equals(mUser, that.mUser) &&
+                Objects.equals(mPassword, that.mPassword) && Objects.equals(mMailFrom, that.mMailFrom) &&
                 Objects.equals(mMailTo, that.mMailTo);
     }
 
@@ -101,12 +94,8 @@ public class MailNotification implements INotify
     @Override
     public String toString()
     {
-        return "MailNotification{" +
-                "mHost='" + mHost + '\'' +
-                ", mPort=" + mPort +
-                ", mUser='" + mUser + '\'' +
-                ", mMailFrom=" + mMailFrom +
-                ", mMailTo=" + mMailTo +
-                '}';
+        return "MailNotification{" + "Host='" + mHost + '\'' + ", Port=" + mPort + ", User='" + mUser + '\'' +
+                ", Password='" + (mPassword == null ? null : "*".repeat(mPassword.length())) + '\'' + ", MailFrom=" +
+                mMailFrom + ", MailTo=" + mMailTo + '}';
     }
 }
