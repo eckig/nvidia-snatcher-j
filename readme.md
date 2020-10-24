@@ -15,8 +15,8 @@ Use `docker pull ghcr.io/eckig/nvidia-snatcher-j:latest` to get image.
 | Environment variable | Description | Notes |
 |:---:|---|---|
 | `SCRAPER_INTERVAL` | Interval | Wait time between requests (in seconds). Default: `20` |
-| `SCRAPER_PARALLELISM` | Parallelism | The number of max. parallel request to send. Default: two times `SCRAPER_INTERVAL` |
-| `SCRAPER_MAX_WAIT` | Max. wait time | The max. time (in seconds) to wait for a page to load. Default: `2` |
+| `SCRAPER_MAX_WAIT` | Max. wait time | The max. time (in seconds) to wait for a page to load. Default: two times `SCRAPER_INTERVAL` |
+| `SCRAPER_PARALLELISM` | Parallelism | The number of max. parallel request to send. Default: `2` |
 | `GMAIL_USER` | GMail password | If empty, no GMail notifications |
 | `GMAIL_PASSWORD` | GMail address | If empty, no GMail notifications |
 | `SCRAPER_STORES` | Supported stores you want to be scraped | comma separated list of stores, e.g. `nvidia_de_de, nvidia_en_us, nbb` |
