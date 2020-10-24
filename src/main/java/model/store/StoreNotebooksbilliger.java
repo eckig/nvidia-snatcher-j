@@ -1,13 +1,15 @@
-package model;
+package model.store;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+import model.Match;
+import model.Search;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
-public class NotebooksbilligerStoreSearch extends Search
+public class StoreNotebooksbilliger extends Search
 {
 
     public enum Model
@@ -35,10 +37,10 @@ public class NotebooksbilligerStoreSearch extends Search
         }
     }
 
-    public NotebooksbilligerStoreSearch(final Model pModel)
+    public StoreNotebooksbilliger(final Model pModel)
     {
         super("NBB", Objects.requireNonNull(pModel.url(), "Model may not be null!"),
-                Objects.requireNonNull(pModel.model(), "Store may not be null"));
+                Objects.requireNonNull(pModel.model(), "Store may not be null"), false);
     }
 
     @Override
@@ -63,7 +65,7 @@ public class NotebooksbilligerStoreSearch extends Search
                 }
                 else
                 {
-                    final String statusText = safeText(status instanceof DomNode ? ((DomNode)status).asText() : status.toString());
+                    final String statusText = safeText(status);
                     final boolean isInStock = statusText.contains("sofort ab lager");
                     match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
                 }
@@ -71,14 +73,5 @@ public class NotebooksbilligerStoreSearch extends Search
             }
         }
         return Optional.empty();
-    }
-
-    private static String safeText(final String pText)
-    {
-        if (pText == null)
-        {
-            return "";
-        }
-        return pText.strip();
     }
 }

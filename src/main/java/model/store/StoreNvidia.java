@@ -1,15 +1,17 @@
-package model;
+package model.store;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.google.common.net.UrlEscapers;
+import model.Match;
+import model.Search;
 
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
-public class NvidiaStoreSearch extends Search
+public class StoreNvidia extends Search
 {
 
     public enum Model
@@ -70,11 +72,11 @@ public class NvidiaStoreSearch extends Search
 
     private final Store mStore;
 
-    public NvidiaStoreSearch(final Model pModel, final Store pStore)
+    public StoreNvidia(final Model pModel, final Store pStore)
     {
-        super(Objects.requireNonNull(pStore,"Store may not be null!").name(),
+        super(Objects.requireNonNull(pStore, "Store may not be null!").name(),
                 Objects.requireNonNull(pModel.url(pStore), "Model may not be null!"),
-                Objects.requireNonNull(pModel.model(), "Store may not be null"));
+                Objects.requireNonNull(pModel.model(), "Store may not be null"), true);
         mStore = pStore;
     }
 
@@ -114,14 +116,5 @@ public class NvidiaStoreSearch extends Search
             }
         }
         return Optional.empty();
-    }
-
-    private static String safeText(final String pText)
-    {
-        if (pText == null)
-        {
-            return "";
-        }
-        return pText.strip();
     }
 }
