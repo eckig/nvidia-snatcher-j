@@ -3,10 +3,12 @@ package main;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
+
 import model.Match;
 import model.Search;
 import notify.INotify;
 import util.Environment;
+import util.RateLimiters;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
 
@@ -34,7 +36,7 @@ public class JNvidiaSnatcher
     private WebClient mWebClient;
 
     private JNvidiaSnatcher(final Search pSearch, final List<INotify> pToNotify, final long pWaitTimeout,
-                            final ExecutorService pAsyncPool)
+            final ExecutorService pAsyncPool)
     {
         mToNotify = pToNotify == null ? List.of() : List.copyOf(pToNotify);
         mSearch = Objects.requireNonNull(pSearch);
@@ -152,7 +154,11 @@ public class JNvidiaSnatcher
             {
                 try
                 {
-                    notify.notify(mSearch, pMessage.notificationMessage());
+                    if (RateLimiters.get(notify.getClass(), pMessage.search().store(), pMessage.search().model())
+                            .tryAcquire())
+                    {
+                        notify.notify(mSearch, pMessage.notificationMessage());
+                    }
                 }
                 catch (final IOException e)
                 {
