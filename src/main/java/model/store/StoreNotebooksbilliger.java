@@ -1,14 +1,15 @@
 package model.store;
 
+import java.util.List;
+import java.util.Optional;
+
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
 import model.Match;
 import model.Model;
 import model.Search;
 import model.Store;
-
-import java.util.List;
-import java.util.Optional;
 
 public class StoreNotebooksbilliger extends Search
 {
@@ -24,6 +25,7 @@ public class StoreNotebooksbilliger extends Search
         {
             final String url = switch (pModel)
                     {
+                        case RTX_3070_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3070+founders+edition";
                         case RTX_3080_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3080+founders+edition";
                         case RTX_3090_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3090+founders+edition";
                     };
@@ -39,7 +41,7 @@ public class StoreNotebooksbilliger extends Search
     }
 
     @Override
-    public <T> Optional<Match> matches(final List<T> pListing)
+    public <T> Match matches(final List<T> pListing)
     {
         for (final var productDetailsListTile : pListing)
         {
@@ -58,9 +60,9 @@ public class StoreNotebooksbilliger extends Search
                     final boolean isInStock = statusText.contains("sofort ab lager");
                     match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
                 }
-                return Optional.of(match);
+                return match;
             }
         }
-        return Optional.empty();
+        return Match.unknown(this);
     }
 }

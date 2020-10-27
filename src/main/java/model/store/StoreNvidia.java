@@ -1,16 +1,17 @@
 package model.store;
 
-import com.gargoylesoftware.htmlunit.html.DomNode;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import model.Match;
-import model.Model;
-import model.Search;
-import model.Store;
-
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
+
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+import model.Match;
+import model.Model;
+import model.Search;
+import model.Store;
 
 public class StoreNvidia extends Search
 {
@@ -38,6 +39,7 @@ public class StoreNvidia extends Search
         Objects.requireNonNull(pModel, "Model may not be null!");
         final String gpu = switch (pModel)
                 {
+                    case RTX_3070_FE -> "RTX%203070";
                     case RTX_3080_FE -> "RTX%203080";
                     case RTX_3090_FE -> "RTX%203090";
                 };
@@ -54,14 +56,14 @@ public class StoreNvidia extends Search
     }
 
     @Override
-    public <T> Optional<Match> matches(final List<T> pListing)
+    public <T> Match matches(final List<T> pListing)
     {
         for (final var productDetailsListTile : pListing)
         {
             if (productDetailsListTile instanceof DomNode)
             {
-                final DomNode htmlElement = (DomNode) productDetailsListTile;
-                final var status = htmlElement.getFirstByXPath("//div[@class='buy']/a/text()");
+                final var htmlElement = (DomNode) productDetailsListTile;
+                final var status = safeText(htmlElement.getFirstByXPath("//div[@class='buy']"));
                 final Match match;
                 if (status == null)
                 {
@@ -69,14 +71,13 @@ public class StoreNvidia extends Search
                 }
                 else
                 {
-                    final boolean isInStock = isInStock(safeText(status.toString()));
-                    match = isInStock ? Match.inStock(this, status.toString()) :
-                            Match.outOfStock(this, status.toString());
+                    final boolean isInStock = isInStock(status);
+                    match = isInStock ? Match.inStock(this, status) : Match.outOfStock(this, status);
                 }
-                return Optional.of(match);
+                return match;
             }
         }
-        return Optional.empty();
+        return Match.unknown(this);
     }
 
     private boolean isInStock(final String pStatus)

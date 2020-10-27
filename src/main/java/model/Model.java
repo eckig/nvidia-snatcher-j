@@ -5,6 +5,7 @@ import java.util.Optional;
 
 public enum Model
 {
+    RTX_3070_FE("3070_fe"),
     RTX_3080_FE("3080_fe"),
     RTX_3090_FE("3090_fe");
 

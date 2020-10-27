@@ -1,5 +1,15 @@
 package main;
 
+import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
@@ -11,16 +21,6 @@ import util.Environment;
 import util.RateLimiters;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class JNvidiaSnatcher
 {
@@ -101,7 +101,7 @@ public class JNvidiaSnatcher
                     listing = mSearch.getListing(page);
                 }
 
-                return listing == null ? null : mSearch.matches(listing).orElse(null);
+                return listing == null ? null : mSearch.matches(listing);
             }
             catch (final Exception e)
             {

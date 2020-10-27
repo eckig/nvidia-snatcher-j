@@ -1,13 +1,13 @@
 package model;
 
-import com.gargoylesoftware.htmlunit.html.DomNode;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import util.Environment;
-
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
+
+import com.gargoylesoftware.htmlunit.html.DomNode;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
+
+import util.Environment;
 
 public abstract class Search
 {
@@ -49,7 +49,7 @@ public abstract class Search
 
     public abstract <T> List<T> getListing(final HtmlPage pHtmlPage);
 
-    public abstract <T> Optional<Match> matches(final List<T> pListing);
+    public abstract <T> Match matches(final List<T> pListing);
 
     @Override
     public boolean equals(final Object pO)
@@ -68,20 +68,20 @@ public abstract class Search
 
     protected static String safeText(final Object pNode)
     {
-        if (pNode instanceof DomNode)
-        {
-            return safeText(((DomNode) pNode).asText());
-        }
-        return pNode == null ? "" : safeText(pNode.toString());
-    }
-
-    protected static String safeText(final String pText)
-    {
-        if (pText == null)
+        if (pNode == null)
         {
             return "";
         }
-        return pText.strip();
+        final String text;
+        if (pNode instanceof DomNode)
+        {
+            text = ((DomNode) pNode).asText();
+        }
+        else
+        {
+            text = pNode.toString();
+        }
+        return text.replace("[]", "").strip();
     }
 
     public static List<Search> fromEnvironment()
