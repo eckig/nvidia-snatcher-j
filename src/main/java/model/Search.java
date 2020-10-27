@@ -50,21 +50,6 @@ public abstract class Search
 
     public abstract Optional<Match> isInStock(final HtmlPage pHtmlPage);
 
-    @Override
-    public boolean equals(final Object pO)
-    {
-        if (this == pO)
-        {
-            return true;
-        }
-        if (pO == null || getClass() != pO.getClass())
-        {
-            return false;
-        }
-        final Search search = (Search) pO;
-        return Objects.equals(url, search.url) && Objects.equals(model, search.model);
-    }
-
     protected static String safeText(final Object pNode)
     {
         if (pNode == null)
@@ -103,14 +88,8 @@ public abstract class Search
     }
 
     @Override
-    public int hashCode()
-    {
-        return Objects.hash(url, model);
-    }
-
-    @Override
     public String toString()
     {
-        return "Search{" + "url='" + url + '\'' + ", title='" + model + '\'' + '}';
+        return "Search{" + "store=" + store + ", model=" + model + '}';
     }
 }

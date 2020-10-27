@@ -18,6 +18,7 @@ import model.Match;
 import model.Search;
 import notify.INotify;
 import util.Environment;
+import util.Pool;
 import util.RateLimiters;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
@@ -32,31 +33,23 @@ public class JNvidiaSnatcher
     private final Search mSearch;
     private final List<INotify> mToNotify;
     private final ExecutorService mAsyncPool;
-
-    private WebClient mWebClient;
+    private final Pool<WebClient> mWebClientPool;
 
     private JNvidiaSnatcher(final Search pSearch, final List<INotify> pToNotify, final long pWaitTimeout,
-            final ExecutorService pAsyncPool)
+            final ExecutorService pAsyncPool, final Pool<WebClient> pWebClientPool)
     {
         mToNotify = pToNotify == null ? List.of() : List.copyOf(pToNotify);
         mSearch = Objects.requireNonNull(pSearch);
         mWaitTimeout = pWaitTimeout;
         mAsyncPool = pAsyncPool;
+        mWebClientPool = pWebClientPool;
     }
 
-    private static WebClient createWebClient(final Search pSearch)
+    private static WebClient createWebClient()
     {
         final WebClient webClient = new WebClient();
-        if (pSearch.javascript())
-        {
-            webClient.setAjaxController(SynchronousAjaxController.instance());
-            webClient.setJavaScriptErrorListener(new SilentJavaScriptErrorListener());
-            webClient.getOptions().setJavaScriptEnabled(true);
-        }
-        else
-        {
-            webClient.getOptions().setJavaScriptEnabled(false);
-        }
+        webClient.setAjaxController(SynchronousAjaxController.instance());
+        webClient.setJavaScriptErrorListener(new SilentJavaScriptErrorListener());
         webClient.setIncorrectnessListener(SilentIncorrectnessListener.instance());
         webClient.getOptions().setCssEnabled(false);
         webClient.getOptions().setDownloadImages(false);
@@ -68,15 +61,6 @@ public class JNvidiaSnatcher
         webClient.getOptions().setHistoryPageCacheLimit(0);
         webClient.getOptions().setHistorySizeLimit(-1);
         return webClient;
-    }
-
-    private WebClient getWebClient()
-    {
-        if (mWebClient == null)
-        {
-            mWebClient = createWebClient(mSearch);
-        }
-        return mWebClient;
     }
 
     private CompletableFuture<Match> loadAsync(final WebClient pWebClient)
@@ -106,34 +90,44 @@ public class JNvidiaSnatcher
 
     private void load()
     {
-        Match result = null;
-        try
+        try (final var pooledWebClient = mWebClientPool.get())
         {
-            result = loadAsync(getWebClient()).get(mWaitTimeout, TimeUnit.SECONDS);
+            final WebClient webClient = pooledWebClient.element();
+            webClient.getOptions().setJavaScriptEnabled(mSearch.javascript());
+            
+            Match result = null;
+            try
+            {
+                result = loadAsync(webClient).get(mWaitTimeout, TimeUnit.SECONDS);
+            }
+            catch (final Exception e)
+            {
+                System.out.println("ERROR while scraping page: " + e);
+            }
+
+            notifyMatch(result == null ? Match.unknown(mSearch) : result);
+            if (result == null)
+            {
+                pooledWebClient.destroyed();
+                reset(webClient);
+            }
         }
         catch (final Exception e)
         {
-            System.out.println("ERROR while scraping page: " + e);
-        }
-
-        notifyMatch(result == null ? Match.unknown(mSearch) : result);
-        if (result == null)
-        {
-            reset();
+            // should not happen
+            System.out.println("ERROR while waiting for pooled WebClient: " + e);
         }
     }
 
-    private void reset()
+    private void reset(final WebClient pWebClient)
     {
-        final var client = mWebClient;
-        if (client != null)
+        if (pWebClient != null)
         {
             // if nothing found, clear cache and cookies before next try:
-            client.getCache().clear();
-            client.getCookieManager().clearCookies();
-            client.close();
+            pWebClient.getCache().clear();
+            pWebClient.getCookieManager().clearCookies();
+            pWebClient.close();
         }
-        mWebClient = null;
     }
 
     private void notifyMatch(final Match pMessage)
@@ -178,10 +172,11 @@ public class JNvidiaSnatcher
         // dont use fixed thread pool as a thread might get stuck (timeout, etc.)
         final var asyncPool = Executors.newCachedThreadPool();
         final var schedulePool = Executors.newScheduledThreadPool(parallelism);
+        final var webClientPool = new Pool<>(parallelism, JNvidiaSnatcher::createWebClient);
 
         for (final var search : targets)
         {
-            final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify, waitTimeout, asyncPool);
+            final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify, waitTimeout, asyncPool, webClientPool);
             schedulePool.scheduleWithFixedDelay(scraper::load, 0, interval, TimeUnit.SECONDS);
         }
 
