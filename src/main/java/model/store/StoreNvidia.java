@@ -1,11 +1,9 @@
 package model.store;
 
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
-import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 import model.Match;
@@ -44,40 +42,22 @@ public class StoreNvidia extends Search
                     case RTX_3090_FE -> "RTX%203090";
                 };
         final String locale = pLocale.toLanguageTag().toLowerCase();
-        return "https://www.nvidia.com/" + locale + "/shop/geforce/gpu/?page=1&limit=9&locale=" + locale +
+        return "https://www.nvidia.com/" + locale + "/shop/geforce/gpu/?page=1&limit=1&locale=" + locale +
                 "&category=GPU&gpu=" + gpu + "&manufacturer=NVIDIA";
     }
 
     @Override
-    public <T> List<T> getListing(final HtmlPage pPage)
+    public Optional<Match> isInStock(final HtmlPage pHtmlPage)
     {
-        return pPage == null ? null :
-                pPage.getByXPath("//div[@class='product-details-list-tile' or @class='product-container clearfix']");
-    }
-
-    @Override
-    public <T> Match matches(final List<T> pListing)
-    {
-        for (final var productDetailsListTile : pListing)
+        final Object firstByXPath = pHtmlPage.getFirstByXPath("//div[@class='buy']");
+        final var status = safeText(firstByXPath);
+        if (status == null || status.isBlank())
         {
-            if (productDetailsListTile instanceof DomNode)
-            {
-                final var htmlElement = (DomNode) productDetailsListTile;
-                final var status = safeText(htmlElement.getFirstByXPath("//div[@class='buy']"));
-                final Match match;
-                if (status == null)
-                {
-                    match = Match.unknown(this);
-                }
-                else
-                {
-                    final boolean isInStock = isInStock(status);
-                    match = isInStock ? Match.inStock(this, status) : Match.outOfStock(this, status);
-                }
-                return match;
-            }
+            return Optional.empty();
         }
-        return Match.unknown(this);
+        final boolean isInStock = isInStock(status);
+        final Match match = isInStock ? Match.inStock(this, status) : Match.outOfStock(this, status);
+        return Optional.of(match);
     }
 
     private boolean isInStock(final String pStatus)

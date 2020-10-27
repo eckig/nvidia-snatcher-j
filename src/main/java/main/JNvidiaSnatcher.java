@@ -86,22 +86,16 @@ public class JNvidiaSnatcher
             try
             {
                 final HtmlPage page = pWebClient.getPage(mSearch.url());
-
-                List<Object> listing = null;
+                Match match = mSearch.isInStock(page).orElse(null);
                 if (mSearch.javascript())
                 {
-                    for (int i = 0; i < 5 && (listing == null || listing.isEmpty()); i++)
+                    for (int i = 0; i < 5 && match == null; i++)
                     {
                         pWebClient.waitForBackgroundJavaScript(200);
-                        listing = mSearch.getListing(page);
+                        match = mSearch.isInStock(page).orElse(null);
                     }
                 }
-                else
-                {
-                    listing = mSearch.getListing(page);
-                }
-
-                return listing == null ? null : mSearch.matches(listing);
+                return match;
             }
             catch (final Exception e)
             {
@@ -122,11 +116,8 @@ public class JNvidiaSnatcher
             System.out.println("ERROR while scraping page: " + e);
         }
 
-        if (result != null)
-        {
-            notifyMatch(result);
-        }
-        else
+        notifyMatch(result == null ? Match.unknown(mSearch) : result);
+        if (result == null)
         {
             reset();
         }

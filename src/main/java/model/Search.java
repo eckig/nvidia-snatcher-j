@@ -2,6 +2,7 @@ package model;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
@@ -47,9 +48,7 @@ public abstract class Search
         return javascript;
     }
 
-    public abstract <T> List<T> getListing(final HtmlPage pHtmlPage);
-
-    public abstract <T> Match matches(final List<T> pListing);
+    public abstract Optional<Match> isInStock(final HtmlPage pHtmlPage);
 
     @Override
     public boolean equals(final Object pO)

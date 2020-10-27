@@ -1,9 +1,7 @@
 package model.store;
 
-import java.util.List;
 import java.util.Optional;
 
-import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
 import model.Match;
@@ -35,34 +33,16 @@ public class StoreNotebooksbilliger extends Search
     }
 
     @Override
-    public <T> List<T> getListing(final HtmlPage pPage)
+    public Optional<Match> isInStock(final HtmlPage pHtmlPage)
     {
-        return pPage == null ? null : pPage.getByXPath("//div[@id='product_page_detail']");
-    }
-
-    @Override
-    public <T> Match matches(final List<T> pListing)
-    {
-        for (final var productDetailsListTile : pListing)
+        final var status = pHtmlPage.getFirstByXPath("//div[@class='availability_widget']");
+        if (status == null)
         {
-            if (productDetailsListTile instanceof DomNode)
-            {
-                final var htmlElement = (DomNode) productDetailsListTile;
-                final var status = htmlElement.getFirstByXPath("//div[@class='availability_widget']");
-                final Match match;
-                if (status == null)
-                {
-                    match = Match.unknown(this);
-                }
-                else
-                {
-                    final String statusText = safeText(status);
-                    final boolean isInStock = statusText.contains("sofort ab lager");
-                    match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
-                }
-                return match;
-            }
+            return Optional.empty();
         }
-        return Match.unknown(this);
+        final String statusText = safeText(status);
+        final boolean isInStock = statusText.contains("sofort ab lager");
+        final Match match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
+        return Optional.of(match);
     }
 }
