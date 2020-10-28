@@ -7,7 +7,7 @@ import java.util.function.Supplier;
 
 public class Pool<T>
 {
-    private final BlockingQueue<T> mPool;
+    private final BlockingQueue<PooledImpl> mPool;
     private final int mSize;
     private final Supplier<T> mCreator;
 
@@ -26,12 +26,11 @@ public class Pool<T>
             {
                 if (mPool.size() < mSize)
                 {
-                    mPool.add(mCreator.get());
+                    mPool.add(new PooledImpl(mCreator.get()));
                 }
             }
         }
-        final T next = mPool.take();
-        return new PooledImpl(next);
+        return mPool.take();
     }
 
     public interface IPooled<T> extends AutoCloseable
@@ -69,7 +68,7 @@ public class Pool<T>
         {
             if (!imDestroyed)
             {
-                mPool.add(imElement);
+                mPool.add(this);
             }
         }
     }

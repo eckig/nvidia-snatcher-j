@@ -24,8 +24,8 @@ public class StoreNotebooksbilliger extends Search
             final String url = switch (pModel)
                     {
                         case RTX_3070_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3070+founders+edition";
-                        case RTX_3080_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3080+founders+edition";
-                        case RTX_3090_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3090+founders+edition";
+                        case RTX_3080_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3080+founders+edition+683301";
+                        case RTX_3090_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3090+founders+edition+683300";
                     };
             return Optional.of(new StoreNotebooksbilliger(pModel, url));
         }
@@ -41,8 +41,7 @@ public class StoreNotebooksbilliger extends Search
             return Optional.empty();
         }
         final String statusText = safeText(status);
-        final boolean isInStock = statusText.contains("sofort ab lager");
-        final Match match = isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText);
-        return Optional.of(match);
+        final boolean isInStock = statusText.contains("lager") || statusText.contains("werktage");
+        return Optional.of(isInStock ? Match.inStock(this, statusText) : Match.outOfStock(this, statusText));
     }
 }

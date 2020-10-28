@@ -49,15 +49,13 @@ public class StoreNvidia extends Search
     @Override
     public Optional<Match> isInStock(final HtmlPage pHtmlPage)
     {
-        final Object firstByXPath = pHtmlPage.getFirstByXPath("//div[@class='buy']");
-        final var status = safeText(firstByXPath);
-        if (status == null || status.isBlank())
+        final Object statusElement = pHtmlPage.getFirstByXPath("//div[@class='buy']");
+        if (statusElement == null)
         {
             return Optional.empty();
         }
-        final boolean isInStock = isInStock(status);
-        final Match match = isInStock ? Match.inStock(this, status) : Match.outOfStock(this, status);
-        return Optional.of(match);
+        final var status = safeText(statusElement);
+        return Optional.of(isInStock(status) ? Match.inStock(this, status) : Match.outOfStock(this, status));
     }
 
     private boolean isInStock(final String pStatus)
