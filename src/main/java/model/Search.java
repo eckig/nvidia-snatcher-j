@@ -73,7 +73,7 @@ public abstract class Search
         {
             text = pNode.toString();
         }
-        return text.replace("[]", "").strip();
+        return text.strip();
     }
 
     public static List<Search> fromEnvironment()

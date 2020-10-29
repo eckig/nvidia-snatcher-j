@@ -7,30 +7,27 @@ import java.util.function.Supplier;
 
 public class Pool<T>
 {
-    private final BlockingQueue<PooledImpl> mPool;
-    private final int mSize;
+    private final BlockingQueue<IPooled<T>> mPool;
     private final Supplier<T> mCreator;
 
     public Pool(final int pSize, final Supplier<T> pCreator)
     {
-        mSize = pSize;
         mCreator = Objects.requireNonNull(pCreator);
         mPool = new ArrayBlockingQueue<>(pSize);
+        for (int i = 0; i < pSize; i++)
+        {
+            mPool.add(new LazyPooledImpl());
+        }
     }
 
     public IPooled<T> get() throws InterruptedException
     {
-        if (mPool.size() < mSize)
-        {
-            synchronized (this)
-            {
-                if (mPool.size() < mSize)
-                {
-                    mPool.add(new PooledImpl(mCreator.get()));
-                }
-            }
-        }
         return mPool.take();
+    }
+
+    private T create()
+    {
+        return mCreator.get();
     }
 
     public interface IPooled<T> extends AutoCloseable
@@ -40,16 +37,11 @@ public class Pool<T>
         T element();
     }
 
-    private class PooledImpl implements IPooled<T>
+    private class LazyPooledImpl implements IPooled<T>
     {
 
-        private final T imElement;
+        private volatile T imElement;
         private volatile boolean imDestroyed = false;
-
-        private PooledImpl(final T pElement)
-        {
-            imElement = pElement;
-        }
 
         @Override
         public void destroyed()
@@ -60,16 +52,23 @@ public class Pool<T>
         @Override
         public T element()
         {
+            if (imElement == null && !imDestroyed)
+            {
+                synchronized (this)
+                {
+                    if (imElement == null)
+                    {
+                        imElement = create();
+                    }
+                }
+            }
             return imElement;
         }
 
         @Override
         public void close()
         {
-            if (!imDestroyed)
-            {
-                mPool.add(this);
-            }
+            mPool.add(!imDestroyed ? this : new LazyPooledImpl());
         }
     }
 }

@@ -2,8 +2,6 @@ package main;
 
 import java.io.IOException;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -71,7 +69,7 @@ public class JNvidiaSnatcher
                 }
                 return match;
             }
-            catch (FailingHttpStatusCodeException e)
+            catch (final FailingHttpStatusCodeException e)
             {
                 return Match.invalidHttpStatus(pSearch, e.getMessage());
             }
@@ -145,14 +143,15 @@ public class JNvidiaSnatcher
             }
         }
 
-        if (pMessage.inStock() && notified)
+        if ((pMessage.inStock() && notified) || (last != null && last.unknown() && pMessage.unknown()))
         {
             // if the "in stock" notification has been sent successfully send this search to sleep for a while:
+            // or if the last two attempts didnt result in a proper lookup:
             try
             {
-                Thread.sleep(60000);
+                Thread.sleep(TimeUnit.MINUTES.toMillis(5));
             }
-            catch (InterruptedException pE)
+            catch (final InterruptedException pE)
             {
                 // sleep interrupted
             }
@@ -173,7 +172,7 @@ public class JNvidiaSnatcher
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
         final var interval = Environment.getLong(ENV_LOAD_INTERVAL, 20);
-        final var waitTimeout = Environment.getLong(ENV_LOAD_MAX_WAIT, interval * 2);
+        final var waitTimeout = Environment.getLong(ENV_LOAD_MAX_WAIT, interval * 3);
         final var parallelism = Environment.getInt(ENV_LOAD_PARALLELISM, 2);
         final var notifyOnChange = Environment.getBoolean(ENV_NOTIFY_ON_CHANGE, false);
 
@@ -183,7 +182,7 @@ public class JNvidiaSnatcher
         System.out.println(ENV_NOTIFY_ON_CHANGE + "=" + notifyOnChange);
 
         final var targets = Search.fromEnvironment();
-        final var schedulePool = Executors.newScheduledThreadPool(parallelism);
+        final var schedulePool = Executors.newScheduledThreadPool(targets.size());
         final var webClientPool = new Pool<>(parallelism, JNvidiaSnatcher::createWebClient);
         final var environment = new ScraperEnvironment(waitTimeout, notifyOnChange, webClientPool);
 
