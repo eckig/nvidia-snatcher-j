@@ -3,6 +3,7 @@ package model;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 import com.gargoylesoftware.htmlunit.html.DomNode;
@@ -15,37 +16,44 @@ public abstract class Search
     public static final String ENV_STORES = "SCRAPER_STORES";
     public static final String ENV_MODELS = "SCRAPER_MODELS";
 
-    private final String url;
-    private final Store store;
-    private final Model model;
-    private final boolean javascript;
+    private final String mUrl;
+    private final Store mStore;
+    private final Model mModel;
+    private final boolean mJavascript;
+
+    private final AtomicReference<Match> mLastMatch = new AtomicReference<>();
 
     public Search(final Store pStore, final String pUrl, final Model pModel, final boolean pJavascript)
     {
-        url = Objects.requireNonNull(pUrl, "URL may not be null!");
-        model = Objects.requireNonNull(pModel, "Model may not be null!");
-        store = Objects.requireNonNull(pStore, "Store may not be null!");
-        javascript = pJavascript;
+        mUrl = Objects.requireNonNull(pUrl, "URL may not be null!");
+        mModel = Objects.requireNonNull(pModel, "Model may not be null!");
+        mStore = Objects.requireNonNull(pStore, "Store may not be null!");
+        mJavascript = pJavascript;
     }
 
     public String url()
     {
-        return url;
+        return mUrl;
     }
 
     public Model model()
     {
-        return model;
+        return mModel;
     }
 
     public Store store()
     {
-        return store;
+        return mStore;
     }
 
     public boolean javascript()
     {
-        return javascript;
+        return mJavascript;
+    }
+
+    public Match lastMatch(final Match pLastMatch)
+    {
+        return mLastMatch.getAndSet(pLastMatch);
     }
 
     public abstract Optional<Match> isInStock(final HtmlPage pHtmlPage);
@@ -90,6 +98,6 @@ public abstract class Search
     @Override
     public String toString()
     {
-        return "Search{" + "store=" + store + ", model=" + model + '}';
+        return "Search{" + "store=" + mStore + ", model=" + mModel + '}';
     }
 }

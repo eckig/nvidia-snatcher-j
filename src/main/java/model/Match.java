@@ -48,9 +48,14 @@ public class Match
         return mMessage;
     }
 
-    public boolean notification()
+    public boolean inStock()
     {
         return mState == State.IN_STOCK;
+    }
+
+    public boolean unknown()
+    {
+        return mState == State.UNKNOWN;
     }
 
     public String consoleMessage()
@@ -100,8 +105,7 @@ public class Match
     {
         IN_STOCK("In Stock", Attribute.BOLD(), Attribute.GREEN_TEXT()),
         OUT_OF_STOCK("Out of Stock", Attribute.BOLD(), Attribute.RED_TEXT()),
-        UNKNOWN("Unknown", Attribute.BOLD()),
-        ERROR("Error", Attribute.BOLD(), Attribute.RED_TEXT());
+        UNKNOWN("Unknown", Attribute.BOLD());
 
         private final Attribute[] ansiAttributes;
         private final String name;

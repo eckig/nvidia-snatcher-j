@@ -1,10 +1,9 @@
 package main;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -16,33 +15,20 @@ import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
 
 import model.Match;
 import model.Search;
-import notify.INotify;
 import util.Environment;
 import util.Pool;
-import util.RateLimiters;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
 
 public class JNvidiaSnatcher
 {
-    public static final String ENV_SCRAPER_INTERVAL = "SCRAPER_INTERVAL";
-    public static final String ENV_SCRAPER_PARALLELISM = "SCRAPER_PARALLELISM";
-    public static final String ENV_SCRAPER_MAX_WAIT = "SCRAPER_MAX_WAIT";
+    public static final String ENV_LOAD_INTERVAL = "LOAD_INTERVAL";
+    public static final String ENV_LOAD_PARALLELISM = "LOAD_PARALLELISM";
+    public static final String ENV_LOAD_MAX_WAIT = "LOAD_MAX_WAIT";
+    public static final String ENV_NOTIFY_ON_CHANGE = "NOTIFY_ON_CHANGE";
 
-    private final long mWaitTimeout;
-    private final Search mSearch;
-    private final List<INotify> mToNotify;
-    private final ExecutorService mAsyncPool;
-    private final Pool<WebClient> mWebClientPool;
-
-    private JNvidiaSnatcher(final Search pSearch, final List<INotify> pToNotify, final long pWaitTimeout,
-            final ExecutorService pAsyncPool, final Pool<WebClient> pWebClientPool)
+    private JNvidiaSnatcher()
     {
-        mToNotify = pToNotify == null ? List.of() : List.copyOf(pToNotify);
-        mSearch = Objects.requireNonNull(pSearch);
-        mWaitTimeout = pWaitTimeout;
-        mAsyncPool = pAsyncPool;
-        mWebClientPool = pWebClientPool;
     }
 
     private static WebClient createWebClient()
@@ -63,20 +49,21 @@ public class JNvidiaSnatcher
         return webClient;
     }
 
-    private CompletableFuture<Match> loadAsync(final WebClient pWebClient)
+    private static CompletableFuture<Match> loadAsync(final WebClient pWebClient, final Search pSearch,
+            final Executor pExecutor)
     {
         return CompletableFuture.supplyAsync(() ->
         {
             try
             {
-                final HtmlPage page = pWebClient.getPage(mSearch.url());
-                Match match = mSearch.isInStock(page).orElse(null);
-                if (mSearch.javascript())
+                final HtmlPage page = pWebClient.getPage(pSearch.url());
+                Match match = pSearch.isInStock(page).orElse(null);
+                if (pSearch.javascript())
                 {
                     for (int i = 0; i < 5 && match == null; i++)
                     {
                         pWebClient.waitForBackgroundJavaScript(200);
-                        match = mSearch.isInStock(page).orElse(null);
+                        match = pSearch.isInStock(page).orElse(null);
                     }
                 }
                 return match;
@@ -85,27 +72,28 @@ public class JNvidiaSnatcher
             {
                 throw new RuntimeException(e);
             }
-        }, mAsyncPool);
+        }, pExecutor);
     }
 
-    private void load()
+    private static void load(final Search pSearch, final ScraperEnvironment pEnvironment)
     {
-        try (final var pooledWebClient = mWebClientPool.get())
+        try (final var pooledWebClient = pEnvironment.webClientPool().get())
         {
             final WebClient webClient = pooledWebClient.element();
-            webClient.getOptions().setJavaScriptEnabled(mSearch.javascript());
-            
+            webClient.getOptions().setJavaScriptEnabled(pSearch.javascript());
+
             Match result = null;
             try
             {
-                result = loadAsync(webClient).get(mWaitTimeout, TimeUnit.SECONDS);
+                result = loadAsync(webClient, pSearch, pEnvironment.asyncPool()).get(pEnvironment.waitTimeout(),
+                        TimeUnit.SECONDS);
             }
             catch (final Exception e)
             {
                 System.out.println("ERROR while scraping page: " + e);
             }
 
-            notifyMatch(result == null ? Match.unknown(mSearch) : result);
+            notifyMatch(result == null ? Match.unknown(pSearch) : result, pSearch, pEnvironment);
             if (result == null)
             {
                 pooledWebClient.destroyed();
@@ -119,7 +107,7 @@ public class JNvidiaSnatcher
         }
     }
 
-    private void reset(final WebClient pWebClient)
+    private static void reset(final WebClient pWebClient)
     {
         if (pWebClient != null)
         {
@@ -130,54 +118,75 @@ public class JNvidiaSnatcher
         }
     }
 
-    private void notifyMatch(final Match pMessage)
+    private static void notifyMatch(final Match pMessage, final Search pSearch, final ScraperEnvironment pEnvironment)
     {
         System.out.println(pMessage.consoleMessage());
-        if (pMessage.notification())
+
+        final var last = pSearch.lastMatch(pMessage);
+        boolean notified = true;
+
+        if (pMessage.inStock() || (pEnvironment.notifyOnStatusChanged() && notifyOnChange(pMessage, last)))
         {
-            for (final var notify : mToNotify)
+            for (final var notify : pEnvironment.notifiers())
             {
                 try
                 {
-                    if (RateLimiters.get(notify.getClass(), pMessage.search().store(), pMessage.search().model())
-                            .tryAcquire())
-                    {
-                        notify.notify(mSearch, pMessage.notificationMessage());
-                    }
+                    notify.notify(pSearch, pMessage.notificationMessage());
                 }
                 catch (final IOException e)
                 {
+                    notified = false;
                     System.out.println("Failed to notify about match:");
                     e.printStackTrace(System.out);
                 }
             }
         }
+
+        if (pMessage.inStock() && notified)
+        {
+            // if the "in stock" notification has been sent successfully send this search to sleep for a while:
+            try
+            {
+                Thread.sleep(60000);
+            }
+            catch (InterruptedException pE)
+            {
+                // sleep interrupted
+            }
+        }
+    }
+
+    private static boolean notifyOnChange(final Match pNow, final Match pPrevious)
+    {
+        if (pNow == null || pPrevious == null || pPrevious.unknown() || pNow.unknown())
+        {
+            return false;
+        }
+        return pPrevious.inStock() != pNow.inStock() || !Objects.equals(pNow.message(), pPrevious.message());
     }
 
     public static void main(final String[] args)
     {
         Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
 
-        final var interval = Environment.getLong(ENV_SCRAPER_INTERVAL, 20);
-        final var waitTimeout = Environment.getLong(ENV_SCRAPER_MAX_WAIT, interval * 2);
-        final var parallelism = Environment.getInt(ENV_SCRAPER_PARALLELISM, 2);
+        final var interval = Environment.getLong(ENV_LOAD_INTERVAL, 20);
+        final var waitTimeout = Environment.getLong(ENV_LOAD_MAX_WAIT, interval * 2);
+        final var parallelism = Environment.getInt(ENV_LOAD_PARALLELISM, 2);
+        final var notifyOnChange = Environment.getBoolean(ENV_NOTIFY_ON_CHANGE, false);
 
-        System.out.println(ENV_SCRAPER_INTERVAL + "=" + interval);
-        System.out.println(ENV_SCRAPER_MAX_WAIT + "=" + waitTimeout);
-        System.out.println(ENV_SCRAPER_PARALLELISM + "=" + parallelism);
+        System.out.println(ENV_LOAD_INTERVAL + "=" + interval);
+        System.out.println(ENV_LOAD_MAX_WAIT + "=" + waitTimeout);
+        System.out.println(ENV_LOAD_PARALLELISM + "=" + parallelism);
+        System.out.println(ENV_NOTIFY_ON_CHANGE + "=" + notifyOnChange);
 
         final var targets = Search.fromEnvironment();
-        final var notify = INotify.fromEnvironment();
-
-        // dont use fixed thread pool as a thread might get stuck (timeout, etc.)
-        final var asyncPool = Executors.newCachedThreadPool();
         final var schedulePool = Executors.newScheduledThreadPool(parallelism);
         final var webClientPool = new Pool<>(parallelism, JNvidiaSnatcher::createWebClient);
+        final var environment = new ScraperEnvironment(waitTimeout, notifyOnChange, webClientPool);
 
         for (final var search : targets)
         {
-            final JNvidiaSnatcher scraper = new JNvidiaSnatcher(search, notify, waitTimeout, asyncPool, webClientPool);
-            schedulePool.scheduleWithFixedDelay(scraper::load, 0, interval, TimeUnit.SECONDS);
+            schedulePool.scheduleWithFixedDelay(() -> load(search, environment), 0, interval, TimeUnit.SECONDS);
         }
 
         try

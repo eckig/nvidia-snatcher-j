@@ -39,6 +39,16 @@ public class Environment
         }
     }
 
+    public static boolean getBoolean(final String pKey, final boolean pDefault)
+    {
+        final var val = get(pKey).orElse(null);
+        if (val == null)
+        {
+            return pDefault;
+        }
+        return val.strip().equalsIgnoreCase("on");
+    }
+
     public static List<String> getList(final String pKey)
     {
         return get(pKey).map(s -> s.split(",")).map(List::of).orElse(List.of());

@@ -14,7 +14,6 @@ public interface INotify
     static List<INotify> fromEnvironment()
     {
         final var list = new ArrayList<INotify>();
-
         final var gmailUser = Environment.get(GMailNotification.ENV_GMAIL_USER).orElse(null);
         final var gmailPw = Environment.get(GMailNotification.ENV_GMAIL_PASSWORD).orElse(null);
         if (gmailUser != null && gmailPw != null)
