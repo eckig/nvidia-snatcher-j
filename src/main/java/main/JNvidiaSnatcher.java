@@ -78,12 +78,12 @@ public class JNvidiaSnatcher
 
     private static void load(final Search pSearch, final ScraperEnvironment pEnvironment)
     {
+        Match result = null;
         try (final var pooledWebClient = pEnvironment.webClientPool().get())
         {
             final WebClient webClient = pooledWebClient.element();
             webClient.getOptions().setJavaScriptEnabled(pSearch.javascript());
 
-            Match result = null;
             try
             {
                 result = loadAsync(webClient, pSearch, pEnvironment.asyncPool()).get(pEnvironment.waitTimeout(),
@@ -94,7 +94,6 @@ public class JNvidiaSnatcher
                 System.out.println("ERROR while scraping page: " + e);
             }
 
-            notifyMatch(result == null ? Match.unknown(pSearch) : result, pSearch, pEnvironment);
             if (result == null)
             {
                 pooledWebClient.destroyed();
@@ -105,6 +104,16 @@ public class JNvidiaSnatcher
         {
             // should not happen
             System.out.println("ERROR while waiting for pooled WebClient: " + e);
+        }
+
+        try
+        {
+            notifyMatch(result == null ? Match.unknown(pSearch) : result, pSearch, pEnvironment);
+        }
+        catch (final Exception e)
+        {
+            // should not happen
+            System.out.println("ERROR while sending notifications: " + e);
         }
     }
 
