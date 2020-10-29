@@ -37,6 +37,11 @@ public class Match
     {
         return new Match(pSearch, "Status could not be retrieved.", State.UNKNOWN);
     }
+    
+    public static Match invalidHttpStatus(final Search pSearch, final String pMessage)
+    {
+        return new Match(pSearch, pMessage, State.UNKNOWN);
+    }
 
     public Search search()
     {

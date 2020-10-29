@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
@@ -49,10 +52,10 @@ public class JNvidiaSnatcher
         return webClient;
     }
 
-    private static CompletableFuture<Match> loadAsync(final WebClient pWebClient, final Search pSearch,
-            final Executor pExecutor)
+    private static Future<Match> loadAsync(final WebClient pWebClient, final Search pSearch,
+            final ExecutorService pExecutor)
     {
-        return CompletableFuture.supplyAsync(() ->
+        return pExecutor.submit(() ->
         {
             try
             {
@@ -68,11 +71,11 @@ public class JNvidiaSnatcher
                 }
                 return match;
             }
-            catch (final Exception e)
+            catch (FailingHttpStatusCodeException e)
             {
-                throw new RuntimeException(e);
+                return Match.invalidHttpStatus(pSearch, e.getMessage());
             }
-        }, pExecutor);
+        });
     }
 
     private static void load(final Search pSearch, final ScraperEnvironment pEnvironment)
