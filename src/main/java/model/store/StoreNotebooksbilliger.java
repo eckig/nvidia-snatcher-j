@@ -23,7 +23,7 @@ public class StoreNotebooksbilliger extends Search
         {
             final String url = switch (pModel)
                     {
-                        case RTX_3070_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3070+founders+edition";
+                        case RTX_3070_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3070+founders+edition+685357";
                         case RTX_3080_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3080+founders+edition+683301";
                         case RTX_3090_FE -> "https://www.notebooksbilliger.de/nvidia+geforce+rtx+3090+founders+edition+683300";
                     };
