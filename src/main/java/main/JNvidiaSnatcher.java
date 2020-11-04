@@ -1,13 +1,15 @@
 package main;
 
 import java.io.IOException;
+import java.time.LocalTime;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.gargoylesoftware.htmlunit.FailingHttpStatusCodeException;
 import com.gargoylesoftware.htmlunit.WebClient;
@@ -16,23 +18,19 @@ import com.gargoylesoftware.htmlunit.javascript.SilentJavaScriptErrorListener;
 
 import model.Match;
 import model.Search;
-import util.Environment;
 import util.Pool;
 import util.html.SilentIncorrectnessListener;
 import util.html.SynchronousAjaxController;
 
 public class JNvidiaSnatcher
 {
-    public static final String ENV_LOAD_INTERVAL = "LOAD_INTERVAL";
-    public static final String ENV_LOAD_PARALLELISM = "LOAD_PARALLELISM";
-    public static final String ENV_LOAD_MAX_WAIT = "LOAD_MAX_WAIT";
-    public static final String ENV_NOTIFY_ON_CHANGE = "NOTIFY_ON_CHANGE";
+    private static final Logger LOGGER = LoggerFactory.getLogger(JNvidiaSnatcher.class);
 
     private JNvidiaSnatcher()
     {
     }
 
-    private static WebClient createWebClient()
+    private static WebClient createWebClient(final Environment pEnvironment)
     {
         final WebClient webClient = new WebClient();
         webClient.setAjaxController(SynchronousAjaxController.instance());
@@ -47,6 +45,7 @@ public class JNvidiaSnatcher
         webClient.getOptions().setAppletEnabled(false);
         webClient.getOptions().setHistoryPageCacheLimit(0);
         webClient.getOptions().setHistorySizeLimit(-1);
+        pEnvironment.proxyConfig().ifPresent(webClient.getOptions()::setProxyConfig);
         return webClient;
     }
 
@@ -69,29 +68,35 @@ public class JNvidiaSnatcher
                 }
                 return match;
             }
-            catch (final FailingHttpStatusCodeException e)
+            catch (FailingHttpStatusCodeException e)
             {
                 return Match.invalidHttpStatus(pSearch, e.getMessage());
             }
         });
     }
 
-    private static void load(final Search pSearch, final ScraperEnvironment pEnvironment)
+    private static void load(final Search pSearch, final Environment pEnvironment, final Pool<WebClient> pPool,
+            final ExecutorService pAsyncPool)
     {
+        final LocalTime now = LocalTime.now();
+        if (now.isBefore(pEnvironment.timeFrom()) || now.isAfter(pEnvironment.timeTo()))
+        {
+            return;
+        }
+
         Match result = null;
-        try (final var pooledWebClient = pEnvironment.webClientPool().get())
+        try (final var pooledWebClient = pPool.get())
         {
             final WebClient webClient = pooledWebClient.element();
             webClient.getOptions().setJavaScriptEnabled(pSearch.javascript());
 
             try
             {
-                result = loadAsync(webClient, pSearch, pEnvironment.asyncPool()).get(pEnvironment.waitTimeout(),
-                        TimeUnit.SECONDS);
+                result = loadAsync(webClient, pSearch, pAsyncPool).get(pEnvironment.waitTimeout(), TimeUnit.SECONDS);
             }
             catch (final Exception e)
             {
-                System.out.println("ERROR while scraping page: " + e);
+                LOGGER.error("ERROR while scraping page: ", e);
             }
 
             if (result == null)
@@ -103,7 +108,7 @@ public class JNvidiaSnatcher
         catch (final Exception e)
         {
             // should not happen
-            System.out.println("ERROR while waiting for pooled WebClient: " + e);
+            LOGGER.error("ERROR while waiting for pooled WebClient: ", e);
         }
 
         try
@@ -113,7 +118,7 @@ public class JNvidiaSnatcher
         catch (final Exception e)
         {
             // should not happen
-            System.out.println("ERROR while sending notifications: " + e);
+            LOGGER.error("ERROR while sending notifications: ", e);
         }
     }
 
@@ -128,9 +133,9 @@ public class JNvidiaSnatcher
         }
     }
 
-    private static void notifyMatch(final Match pMessage, final Search pSearch, final ScraperEnvironment pEnvironment)
+    private static void notifyMatch(final Match pMessage, final Search pSearch, final Environment pEnvironment)
     {
-        System.out.println(pMessage.consoleMessage());
+        LOGGER.info(pMessage.consoleMessage());
 
         final var last = pSearch.lastMatch(pMessage);
         boolean notified = true;
@@ -146,21 +151,19 @@ public class JNvidiaSnatcher
                 catch (final IOException e)
                 {
                     notified = false;
-                    System.out.println("Failed to notify about match:");
-                    e.printStackTrace(System.out);
+                    LOGGER.error("Failed to notify about match:", e);
                 }
             }
         }
 
-        if ((pMessage.inStock() && notified) || (last != null && last.unknown() && pMessage.unknown()))
+        if (pMessage.inStock() && notified)
         {
             // if the "in stock" notification has been sent successfully send this search to sleep for a while:
-            // or if the last two attempts didnt result in a proper lookup:
             try
             {
-                Thread.sleep(TimeUnit.MINUTES.toMillis(5));
+                Thread.sleep(60000);
             }
-            catch (final InterruptedException pE)
+            catch (InterruptedException pE)
             {
                 // sleep interrupted
             }
@@ -178,26 +181,17 @@ public class JNvidiaSnatcher
 
     public static void main(final String[] args)
     {
-        Logger.getLogger("com.gargoylesoftware").setLevel(Level.OFF);
+        java.util.logging.Logger.getLogger("com.gargoylesoftware").setLevel(java.util.logging.Level.OFF);
 
-        final var interval = Environment.getLong(ENV_LOAD_INTERVAL, 20);
-        final var waitTimeout = Environment.getLong(ENV_LOAD_MAX_WAIT, interval * 3);
-        final var parallelism = Environment.getInt(ENV_LOAD_PARALLELISM, 2);
-        final var notifyOnChange = Environment.getBoolean(ENV_NOTIFY_ON_CHANGE, false);
+        final var environment = Environment.fromSystemEnv();
+        final var schedulePool = Executors.newScheduledThreadPool(environment.searches().size());
+        final var asyncPool = Executors.newCachedThreadPool();
+        final var webClientPool = new Pool<>(environment.parallelism(), () -> createWebClient(environment));
 
-        System.out.println(ENV_LOAD_INTERVAL + "=" + interval);
-        System.out.println(ENV_LOAD_MAX_WAIT + "=" + waitTimeout);
-        System.out.println(ENV_LOAD_PARALLELISM + "=" + parallelism);
-        System.out.println(ENV_NOTIFY_ON_CHANGE + "=" + notifyOnChange);
-
-        final var targets = Search.fromEnvironment();
-        final var schedulePool = Executors.newScheduledThreadPool(targets.size());
-        final var webClientPool = new Pool<>(parallelism, JNvidiaSnatcher::createWebClient);
-        final var environment = new ScraperEnvironment(waitTimeout, notifyOnChange, webClientPool);
-
-        for (final var search : targets)
+        for (final var search : environment.searches())
         {
-            schedulePool.scheduleWithFixedDelay(() -> load(search, environment), 0, interval, TimeUnit.SECONDS);
+            schedulePool.scheduleWithFixedDelay(() -> load(search, environment, webClientPool, asyncPool), 0,
+                    environment.interval(), TimeUnit.SECONDS);
         }
 
         try
@@ -206,7 +200,7 @@ public class JNvidiaSnatcher
         }
         catch (final InterruptedException e)
         {
-            System.out.println("Interrupted!");
+            LOGGER.error("Process interrupted!");
         }
     }
 

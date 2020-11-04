@@ -22,5 +22,7 @@ Use `docker pull ghcr.io/eckig/nvidia-snatcher-j:latest` to get image.
 | `SCRAPER_STORES` | Supported stores you want to be scraped | comma separated list of stores, e.g. `nvidia_de_de, nvidia_en_us, nbb` |
 | `SCRAPER_MODELS` | Supported models you want to be scraped | comma separated list of model, e.g. `3080_fe, 3090_fe, 3070_fe` |
 | `NOTIFY_ON_CHANGE` | Notify on status changed | Default is `off`, only "in stock" status will trigger a notification. Set to `on` to get notified when the status changed. |
+| `TIME_FROM` | Time from | If the current time is before this time no search will be performed. Default is `00:00`. |
+| `TIME_TO` | Time to | If the current time is after this time no search will be performed. Default is `23:59:59`. |
 
 > If you have multi-factor authentication (MFA), you will need to create an [app password](https://myaccount.google.com/apppasswords) and use this instead of your Gmail password.

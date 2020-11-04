@@ -6,13 +6,18 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.gargoylesoftware.htmlunit.html.DomNode;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 
-import util.Environment;
+import main.Environment;
 
 public abstract class Search
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Search.class);
+
     public static final String ENV_STORES = "SCRAPER_STORES";
     public static final String ENV_MODELS = "SCRAPER_MODELS";
 
@@ -91,7 +96,7 @@ public abstract class Search
                 .flatMap(s -> Store.forTag(s).stream())
                 .flatMap(s -> s.createSearchFor(models))
                 .collect(Collectors.toList());
-        System.out.println("Search configured for: " + searches);
+        LOGGER.info("Search configured for: " + searches);
         return searches;
     }
 

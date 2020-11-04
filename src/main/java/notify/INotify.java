@@ -1,11 +1,14 @@
 package notify;
 
 import model.Search;
-import util.Environment;
+
+import main.Environment;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.slf4j.LoggerFactory;
 
 public interface INotify
 {
@@ -13,6 +16,7 @@ public interface INotify
 
     static List<INotify> fromEnvironment()
     {
+        final var logger = LoggerFactory.getLogger(INotify.class);
         final var list = new ArrayList<INotify>();
         final var gmailUser = Environment.get(GMailNotification.ENV_GMAIL_USER).orElse(null);
         final var gmailPw = Environment.get(GMailNotification.ENV_GMAIL_PASSWORD).orElse(null);
@@ -24,10 +28,10 @@ public interface INotify
             }
             catch (final Exception e)
             {
-                System.out.println("Failed to create GMailNotifications: " + e);
+                logger.error("Failed to create GMailNotifications: ", e);
             }
         }
-        System.out.println("Notifications configured: " + list);
+        logger.info("Notifications configured: " + list);
         return list;
     }
 }
